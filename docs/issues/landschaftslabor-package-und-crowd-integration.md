@@ -1,116 +1,131 @@
-# Landschaftslabor als Package und Crowd-Anbindung
+# STRATA als Package und Crowd-Anbindung
 
-Das Landschaftslabor/Karteneditor aus dem Parallelrepository `../../aom-shader/`
-(Pfad ab Repositorywurzel) soll Teil des Spielrepositorys werden. Offene Planung,
-keine Implementierungs-, Balancing- oder Testfreigabe. Vor Übernahme den dortigen
-Arbeitsstand einschließlich noch uncommittierter Export-/Importarbeit sichern.
+Der Landschaftseditor STRATA aus `../../aom-shader/` (Pfad ab Repositorywurzel)
+soll als Workspace-Package ins Spielrepository eingebunden werden. Editor,
+Terrainlaufzeit und Crowd-Anbindung haben getrennte Verantwortlichkeiten.
+Dieses Issue beschreibt offene Integrationsarbeit, keine Implementierungs-,
+Balancing- oder Testfreigabe.
 
-Ein gemeinsamer technischer Integrationsnachweis fehlt. Die
-[Crowd-Simulation](../../packages/crowd-simulation/README.md) bietet einen generischen
-rechteckigen Höhenfeldvertrag, ist aber weder an das Labor noch das eigentliche Spiel angebunden. Package-Übernahme,
-Landschaft/Crowd-Demo und vollständige RTS-Anbindung sind getrennte Schritte.
+## Ausgangsbasis
 
-## Ziel und Package-Grenzen
+STRATA ist ein JavaScript-/GLSL-Editor mit integrierter Materialbibliothek.
+Die feste Flächenvorschau nutzt dieselben Shader und Materialarrays wie die
+Landschaft; ihre Aktualisierung ist entprellt und ihr Layout reserviert.
+Zonen-/Rollenbelegungen besitzen unabhängige Material- und Palettenwerte.
+Die acht Grundmaterialien und ihre Quellen stehen zur Verfügung;
+Materialerzeugungswerkzeuge sind von der Editorlaufzeit getrennt.
 
-- [ ] Eigenständiges Workspace-Package, beispielsweise `@aom/landscape`, mit
-  DOM-/WebGL-freiem Kern für Generierung, autoritative Oberfläche sowie getrennte
-  Spielkarten-/Materialformate. Editor und Materialgalerie sind Werkzeuge, keine
+Spielkarte und Materialgestaltung haben getrennte ZIP-Export-/Importformate.
+Die tatsächlichen Höhen samt eingerechnetem Höhenmaßstab sind maßgeblich,
+nicht eine Neugenerierung aus dem Seed. Der Datenimport führt keinen Archivcode
+aus und lädt nicht automatisch Bilder oder GPU-Ressourcen. Die beigefügte
+JS-/GLSL-Laufzeit ist noch kein eingebundenes Workspace-Package.
+
+Die [Crowd-Simulation](../../packages/crowd-simulation/README.md) besitzt einen
+generischen rechteckigen Höhenfeldvertrag mit expliziter Zeilenrichtung,
+Zellendiagonale und Randbehandlung. Navigation verwendet die maximale Neigung
+beider tatsächlichen Zelldreiecke. Der CPU-Kern ist unabhängig von DOM/WebGL;
+eine typisierte Fassade sowie Node- und klassische Browser-Bundles sind vorhanden.
+Weder STRATA noch das eigentliche Spiel sind an diese Crowd angebunden.
+
+Isolierte CPU-/UI-/Exportprüfungen, produktive Shaderprüfung und ein kleiner
+WebGL-Vorschauvertrag belegen noch keine gemeinsame Landschaft/Crowd-Integration.
+Die vollständige Editor-Browserprüfung ist unter dem festen Task-Limit durch
+Chromiums Thread-Erzeugung blockiert. Reale große Texturpakete, visuelle Abnahme
+und Spiel-/Zielgeräteintegration bleiben offen.
+
+## Package-Grenzen und Datenbesitz
+
+- [ ] STRATA als eigenständiges Workspace-Package mit klaren Einstiegen übernehmen:
+  DOM-/WebGL-freier Gelände-/Datenkern, Terrain-Darstellung und Editorwerkzeug.
+  Bibliothek, Vorschau, Local Storage und Authoring-Werkzeuge sind keine
   Abhängigkeiten der Spielsimulation.
-- [ ] Gelände-Renderpass, Editoroberfläche und Crowd-/Spieladapter getrennt halten.
-  Ein Package mit klaren Einstiegen zunächst mehreren vorsorglichen Packages vorziehen.
-- [ ] Öffentliche Daten-/API-Verträge typisieren. Das Labor ist JavaScript/GLSL;
-  das Crowd-Package zeigt bereits das Muster JavaScript-Interna mit TypeScript-Fassade.
-  Eine vollständige TypeScript-Umschreibung ist keine Vorbedingung der Übernahme.
-- [ ] Karte und Gestaltung unabhängig verwenden/exportieren können. Gespeicherte
-  tatsächliche Höhen bleiben maßgeblich, nicht eine Neugenerierung allein aus dem Seed.
-  Aktive Karte und noch nicht angewendete Editorparameter auseinanderhalten.
+- [ ] Öffentliche Daten-/API-Grenzen typisieren. Vorhandene JavaScript-Interna können
+  wie beim Crowd-Package hinter einer TypeScript-Fassade bleiben; eine vollständige
+  Umschreibung ist keine Integrationsvorbedingung.
+- [ ] Karten-/Materialimport und Paketversionen an den Verbraucher anbinden.
+  Tatsächlich installierte Geometrie und noch nicht angewendete Editorparameter
+  auseinanderhalten. Keine stille Neugenerierung, Höhenreparatur oder doppelte
+  Skalierung beim Laden. Das Verhältnis von Runtime-Codebeigaben und künftigem
+  Packagebezug entscheiden, ohne zwei unabhängig gepflegte Laufzeiten zu schaffen.
+- [ ] Besitz der Körperpositionen und Simulationszeit beim Spielanschluss eindeutig
+  festlegen. Terrain liefert Geometrie, Crowd Bewegung und profilbezogene Navigation;
+  keine konkurrierende Bewegungssimulation oder zweite Simulationsuhr.
 
-## Gemeinsame Oberfläche vor Adapterimplementierung festlegen
+## STRATA-Oberfläche auf Crowd abbilden
 
-Maßgebliche Crowd-Grenzen stehen in den [Typverträgen](../../packages/crowd-simulation/src/contracts.ts),
-der [öffentlichen Fassade](../../packages/crowd-simulation/src/index.ts),
-dem [Höhenfeld](../../packages/crowd-simulation/src/navigation/heightfield.js)
-und der [Navigation](../../packages/crowd-simulation/src/navigation/navigation.js).
+Maßgeblich ist der [Crowd-Oberflächenvertrag](../../packages/crowd-simulation/README.md#oberflächenvertrag)
+mit seinen [öffentlichen Typen](../../packages/crowd-simulation/src/contracts.ts).
+Es fehlt der konkrete Importadapter, nicht ein neuer generischer Höhenfeldvertrag.
 
-- [ ] Rechteckige Laborkarte (520 × 640 m) mit tatsächlicher Ausdehnung und Ursprung
-  auf den Crowd-Höhenfeldvertrag abbilden. Kein quadratisches Padding und keine
-  künstlich spielbaren aufgefüllten Bereiche.
-- [ ] Rasterorientierung und Dreiecksteilung gemeinsam festlegen. Das Labor
-  speichert Zeilen Süd → Nord, Crowd von −Z → +Z. **Bloßes Umdrehen der Zeilen
-  verändert die physische Zellendiagonale.** Höhen/Steigungen zwischen Vertices
-  können dann vom sichtbaren Terrain abweichen.
-- [ ] Speicherorientierung und Diagonale des Adapters gegen Laborgeometrie prüfen.
-  Crowd verwendet das Maximum beider tatsächlichen Dreieckssteigungen einer Zelle;
-  dazu müssen die übergebenen Höhen und Metadaten dieselbe physische Fläche beschreiben.
-  Die Fassade akzeptiert nur selbst erzeugte Höhenfelder, keine beliebigen Surface-Objekte.
-- [ ] Eine Oberfläche für Kollision, Navigation, Picking, Fuß-/Gebäudeauflage und
-  Darstellung sicherstellen. Material-Displacement bleibt kosmetisch. Bereits
-  exportierte Höhenskalierung nicht erneut auf Gameplay-Geometrie anwenden.
-- [ ] Randverhalten und Portale vereinbaren: Lab-Abfragen außerhalb liefern keinen
-  Boden; Crowd-Höhenabfragen klemmen oder verwerfen gemäß gewähltem `boundary`-Vertrag.
-  Navigation hält Körper unabhängig davon vom Rand fern.
-  Spawn-/Zielbereiche deshalb innerhalb des nutzbaren Korridors festlegen.
+- [ ] Das rechteckige 2-m-Laborfeld ohne quadratisches Padding, Glättung oder
+  Umsampling übernehmen. Ausdehnung, tatsächliche Weltkoordinaten, Speicherstart,
+  Zeilenrichtung und Diagonale gemeinsam abbilden. Der Speicherstart des Exports
+  ist nicht automatisch Crowds kleinste X/Z-Ecke; bloße Zeilenumkehr verändert
+  die physische Zellendiagonale.
+- [ ] Höhen und maximale Zellneigungen gegen die tatsächlichen Labordreiecke
+  unabhängig vergleichen: Ecken, Zellinneres, beide Dreiecke, Diagonalen und Ränder.
+  Kollision, Navigation, Picking, Fuß-/Gebäudeauflage und Darstellung müssen dieselbe
+  Makrooberfläche verwenden. Kosmetisches Materialrelief schafft keine Gameplay-Höhe.
+- [ ] Randabfragen und Portale explizit anbinden. Laborabfragen ohne Boden und
+  Crowds gewähltes Clamp-/Reject-Verhalten sind nicht dieselbe Schnittstelle.
+  Clamping erweitert keinen Bewegungsraum; Spawn-/Zielbereiche müssen innerhalb
+  des um Körperfreiheit begrenzten nutzbaren Korridors liegen.
 
-## Weggarantie auf Bewegungsprofile beziehen
+## Weggarantie und tatsächlicher Verkehr
 
-- [ ] Grad und Gradient explizit umrechnen: 35° entsprechen `tan(35°) ≈ 0,7002`;
-  Crowd-Demoprofile verwenden derzeit `maxSlope: 0.6` (etwa 31°). Bestehende
-  Profilwerte nicht stillschweigend auf den Generierungsgrenzwert erhöhen.
-- [ ] Aufstieg, sämtliche Äste und Rundwege nach Crowd-Körperfreiheit prüfen,
-  nicht nur nach dem Lab-Raster für Radius 0. Die Laborkorridore haben konstruktive
-  Steigungsreserve; daraus folgt noch keine allgemeine Profil-/Kapazitätsgarantie.
-- [ ] Marines/Panzer mit tatsächlichen Radien, konservativer Rasterfreistellung,
-  Kurven, Kreuzungen sowie Spawn-/Ankunftsflächen berücksichtigen. Ein statisch
-  durchgängiger Weg beweist weder Gruppenankunft noch Gegenverkehr-Liveness.
-- [ ] Klare Besitzgrenzen: Landschaft liefert unveränderliche Geometrie und
-  Generierungsbedingungen; Crowd besitzt Bewegung und profilbezogene Navigation.
-  Keine zweite Bewegungssimulation oder konkurrierende Positionskorrektur.
+- [ ] Die konstruktive Gelände-Breiten-/Steigungsgarantie für Radius 0 in eine
+  profilbezogene Abnahme übersetzen. Grad in Gradient umrechnen; vorhandene
+  Steigungsgrenzen und Körperradien nicht an Generatorwerte anpassen.
+- [ ] Süd–Nord-Aufstieg, sämtliche Äste, Rundwege, Kurven und Kreuzungen mit den
+  tatsächlichen Marine-/Panzerprofilen prüfen. Konservative Rasterfreistellung
+  sowie ausreichende Spawn-, Park- und Ankunftsflächen berücksichtigen.
+- [ ] Statische Durchgängigkeit von vollständiger Gruppenankunft und Gegenverkehr
+  unterscheiden. Reservierte Plätze und freie Durchfahrten auf den importierten
+  Karten belegen; synthetische Crowd-Fälle und Export-Roundtrips ersetzen das nicht.
+  Dynamische Hindernisse und Kartenänderungen sind keine zugesicherten Crowd-Funktionen.
 
-## Auslieferung und Darstellung
+## Offline-Auslieferung und Renderanbindung
 
-- [ ] [Offline-Ladevertrag](../architecture.md#auslieferung) erhalten: Labor-ESM,
-  Shader-/Asset-`fetch` und Modul-Worker sind nicht direkt mit `file://` und den
-  klassischen synchronen Spielbundles kompatibel. Browser-Bundle, eingebettete
-  Shader, Worker-Auslieferung und serverlosen Karten-/Texturimport festlegen.
-- [ ] Vorhandenen Laborrenderer nicht als zweite autonome Renderanwendung einsetzen:
-  WebGL-Kontext, Kamera, Frameplanung, Resize/Clear und gemeinsame Licht-/Bildpipeline
-  gehören beim Spielbetrieb dem Host. Ressourcenbindung und vollständiges `dispose()`
-  einschließlich Worker, Timer, Listener und GPU-Objekte vereinbaren.
-- [ ] Asset-/Laufzeitbudget nach [Assetpflege](../assets.md) und Zielgeräten bestimmen.
-  Optionale Laborquellen sind derzeit ungefähr 96 MiB und enthalten PNGs; nicht
-  ungeprüft als Standardpayload übernehmen. Farb-, Normalen- und Datenkanäle bei
+- [ ] Den [Offline-Ladevertrag](../architecture.md#auslieferung) erhalten. STRATAs
+  ES-Module, Shader-/Asset-Fetches und Modul-Worker benötigen einen passenden Build
+  und serverlosen Karten-/Texturladeweg. Keine Laufzeit-Imports, CDN oder gelockerten
+  Browserberechtigungen ins Spiel einführen.
+- [ ] Den autonomen Laborrenderer als Terrainpass an den Host anbinden. Die bereits
+  gemeinsam genutzte Materialvorschau löst diese Aufgabe nicht: WebGL-Kontext,
+  Kamera, Frameplanung, Resize/Clear und gemeinsame Licht-/Bildpipeline gehören
+  im Spielbetrieb dem Host. Ressourcenbindung und vollständige Freigabe von
+  Workern, Timern, Listenern und GPU-Objekten vereinbaren.
+- [ ] Quellen und Laufzeit-Assets nach [Assetpflege](../assets.md) und Zielgeräten
+  festlegen. Die optionalen Quellen umfassen ungefähr 95 MiB und enthalten PNGs;
+  nicht ungeprüft zum Standardpayload machen. Farb-, Normalen- und Datenkanäle bei
   einer WebP-/Laufzeitaufbereitung getrennt auf Qualitätsverluste prüfen.
+  Erweiterung des Materialkatalogs mit Quelllagen-, Shader- und Speicherbudgets abstimmen.
 
-## Größe und Suchkosten gezielt untersuchen
+## Größe und Suchkosten
 
-- [ ] Rasterauflösung vor Übernahme der Demo-Einstellungen entscheiden. Die
-  öffentliche Crowd-Fassade verlangt derzeit gleiche Höhenfeld-/Navigationsauflösung;
-  feinere Navigation ist kein unabhängiger Regler zum 2-m-Laborhöhenfeld.
-- [ ] Ein 640-m-Quadrat bei 0,5 m ergibt rund 1,64 Mio. Navigationszellen: analytisch
-  etwa 50 MiB allein für acht Int32-Nachbarn pro Körperklasse und weitere 31 MiB
-  für Kosten/Nachfolger/Flussvektoren je Zielfeld, ohne Heap-/Solverkosten.
-  Keine gemessenen Gerätewerte oder Aussage, dass dieser Maßstab bereits trägt.
-- [ ] Globale Spawn-/Parkplatzsuche und Zielfeldaufbau für die große Karte gesondert
-  betrachten. Gröberes Raster senkt Gitterkosten, begrenzt aber nicht automatisch
-  die geometrische Kandidatensuche. Kein vorsorglicher Solverumbau ohne Befund.
+- [ ] Das vorhandene 2-m-Raster als direkten Integrationseinstieg verwenden.
+  Crowd koppelt Navigations- und Höhenfeldauflösung; eine feinere Navigation
+  ist kein unabhängiger Regler. Die Demo-Auflösung nicht unbesehen übernehmen.
+- [ ] Für repräsentative Laborkarten Speicher und Aufbaukosten pro Körperklasse
+  und Zielfeld sowie die globalen Spawn-/Formationssuchen untersuchen. Ein grobes
+  Gitter begrenzt nicht automatisch die Zahl geometrischer Parkplatzkandidaten.
+  Erst konkrete Kostenbefunde begründen einen Solver-/Suchraumumbau.
 
-## Empfohlene Reihenfolge und Abnahme
+## Integrationsfolge und Abnahme
 
-1. Laboroberfläche einschließlich Diagonale, Rand und Skalierung auf den generischen
-   Crowd-Oberflächenvertrag abbilden und die tatsächliche Übereinstimmung belegen.
-2. Landschaftskern mit typisierter Package-Grenze und Offline-Build übernehmen.
-3. Kleine gemeinsame Demo mit importierter Landschaft, Marines und Panzern anbinden;
-   noch kein komplettes Gefecht und kein Austausch bestehender Spielnavigation.
-4. Höhenübereinstimmung an Ecken, Zellinneren und beiden Dreiecken sowie sämtliche
-   Äste, Breiten, Körperfreiheit und Ankunftsbereiche gezielt prüfen. Export-/Import-
-   Roundtrips ersetzen diese Crowd-Vertragsprüfung nicht.
-5. Nach eigener Freigabe Suchkosten und tatsächliche Gruppen-/Gegenverkehrsankunft
-   untersuchen; danach Terrain-Renderpass und vollständige Spielanbindung angehen.
+1. Package-/Datenbesitz und Offline-Bauweg festlegen; den Terrainadapter gegen
+   importierte Laborgeometrie ohne Renderer oder Gefecht prüfen.
+2. Kleine gemeinsame Demo mit STRATA-Karte und tatsächlichen Marine-/Panzerprofilen
+   anbinden; alle Wege, Körperfreiheit und Ankunftsbereiche gezielt abnehmen.
+3. Suchkosten und tatsächliche Gruppen-/Gegenverkehrsankunft nach eigener Freigabe
+   untersuchen. Danach Terrainpass und vollständigen Spielanschluss vornehmen.
+4. Beleuchtung, Materialmaßstab, Bodenkontakt, Picking und Zielgerätebudgets im Spiel
+   menschlich abnehmen. Eine technische Import-/Shaderprüfung schließt dies nicht ab.
 
-Build-/Vertragsprüfungen nach [Prüfregeln](../testing.md) auswählen. Keine automatische
-Freigabe für breite KI-/Simulationsläufe, Langläufe oder Geräteabnahme. Visuelle
-Lesbarkeit, Fuß-/Fahrphysik und Zielgeräteperformance bleiben menschlich abzunehmen.
-Bestehende RNG-Reihenfolge, Hindernisse, Radien, Referenzen und Save-Verträge schützen.
+Prüfungen nach den [Prüfregeln](../testing.md) auswählen. Bestehende RNG-Reihenfolge,
+Hindernisse, Radien, Referenzen und Save-Verträge schützen. Keine automatische
+Freigabe für breite KI-/Simulationsläufe, Langläufe oder Geräteabnahme.
 
 Verwandte offene Arbeit: [Terrain/Starts](terrain-generation.md),
 [Navigation/Liveness](navigation-worker-und-gruppenankunft.md),
