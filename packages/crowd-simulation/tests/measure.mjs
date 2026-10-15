@@ -9,14 +9,14 @@ const counts = process.argv.slice(2).map(Number);
 if (!counts.length) counts.push(100, 500, 1000);
 if (counts.some(n => !Number.isInteger(n) || n < 1 || n > 2000)) throw new Error('Counts must be integers from 1 to 2000');
 const percentile = (samples, p) => samples.slice().sort((a, b) => a - b)[Math.floor((samples.length - 1) * p)];
-console.log(JSON.stringify({ node: process.version, mapSize: nav.halfSize * 2, setupMs, spawnCapacity: nav.spawnSites.length }));
+console.log(JSON.stringify({ node: process.version, map: { width: nav.width, depth: nav.depth }, setupMs, spawnCapacity: nav.spawnSites.length }));
 for (const count of counts) {
   const world = createFixtureWorld();
   let t = performance.now();
   core.spawnAgents(world, count - 1);
   const spawnMs = performance.now() - t, spawned = world.units.length;
   t = performance.now();
-  const accepted = core.moveTo(world, { x: nav.halfSize / 2, z: -nav.halfSize / 2 });
+  const accepted = core.moveTo(world, { x: nav.center.x + nav.width / 4, z: nav.center.z - nav.depth / 4 });
   const commandMs = performance.now() - t;
   const tick = [], neighbours = [], poses = [];
   for (let i = 0; i < 40; i++) {

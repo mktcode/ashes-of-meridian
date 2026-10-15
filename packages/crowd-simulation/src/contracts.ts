@@ -13,12 +13,49 @@ export interface PointXZ {
   readonly x: number;
   readonly z: number;
 }
+export interface BoundsXZ {
+  readonly minX: number;
+  readonly minZ: number;
+  readonly maxX: number;
+  readonly maxZ: number;
+}
+export type HeightfieldOptions = {
+  readonly cellSize: number;
+  readonly heights: ArrayLike<number>;
+  readonly rowOrder?: 'increasing-z' | 'decreasing-z';
+  // a,b are consecutive vertices of a row; c,d are directly below in storage.
+  readonly diagonal?: 'b-c' | 'a-d';
+  readonly boundary?: 'clamp' | 'reject';
+} & (
+  | {
+      readonly halfSize: number;
+      readonly width?: never;
+      readonly depth?: never;
+      readonly origin?: never;
+    }
+  | {
+      readonly width: number;
+      readonly depth: number;
+      readonly origin?: PointXZ;
+      readonly halfSize?: never;
+    }
+);
 export interface Heightfield {
   readonly [surfaceId]: true;
-  readonly halfSize: number;
+  readonly width: number;
+  readonly depth: number;
+  readonly bounds: BoundsXZ;
+  // Cell counts; the height array has (columns + 1) * (rows + 1) vertices.
+  readonly columns: number;
+  readonly rows: number;
   readonly cellSize: number;
+  readonly rowOrder: 'increasing-z' | 'decreasing-z';
+  readonly diagonal: 'b-c' | 'a-d';
+  readonly boundary: 'clamp' | 'reject';
+  contains(x: number, z: number): boolean;
   heightAt(x: number, z: number): number;
   slopeAt(x: number, z: number): number;
+  cellSlopeAt(x: number, z: number): number;
 }
 export interface NavigationWorld {
   readonly [navigationId]: true;

@@ -42,7 +42,7 @@ assert.ok(core.moveTo(world, { x: 6, z: 0 }));
 assert.equal(world.stats.fieldBuilds, 1, 'identical command does not rebuild the field');
 const frozen = JSON.stringify(world);
 for (const dt of [0, -1, NaN, Infinity]) core.update(world, dt);
-for (const point of [null, { x: NaN, z: 0 }, { x: 0, z: Infinity }, { x: nav.halfSize + 1, z: 0 }, { x: 2.5, z: 0 }, { x: nav.halfSize - 1, z: 0 }]) {
+for (const point of [null, { x: NaN, z: 0 }, { x: 0, z: Infinity }, { x: nav.bounds.maxX + 1, z: 0 }, { x: 2.5, z: 0 }, { x: nav.bounds.maxX - 1, z: 0 }]) {
   assert.equal(core.moveTo(world, point), false);
 }
 assert.equal(JSON.stringify(world), frozen, 'pause/invalid commands preserve movement, field and destination');

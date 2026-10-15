@@ -66,10 +66,8 @@ sind die maßgeblichen API-Signaturen.
   dort nicht wiederverwendet. Gruppen enthalten jeweils ein Bewegungsprofil.
   Profilnamen haben keine Modellbedeutung; die Verkehrsoption unterscheidet
   kooperatives Nachgeben von unabhängigen lokalen Umwegen.
-- Das Gelände ist ein zentriertes quadratisches Höhenfeld, zeilenweise von -Z nach
-  +Z und darin von -X nach +X. Pro Zelle gelten die Dreiecke `(a,c,b)` und `(b,c,d)`.
-  Navigation verwendet dessen Auflösung und tatsächliche Dreieckssteigungen.
-  Endliche Oberflächenabfragen außerhalb des Feldes klemmen an den Rand.
+- Das Gelände ist ein unveränderliches rechteckiges Höhenfeld. Der folgende
+  Oberflächenvertrag gilt unabhängig von Generator, Editor und Darstellung.
   Einheiten bewegen sich auf X/Z, Y ist Höhe, Yaw ist Radiant mit +Z als Vorwärtsrichtung.
 - Gelände, Hindernisse und Profile werden beim Erzeugen defensiv übernommen und
   bleiben unveränderlich. Für eine andere Karte eine neue Navigationswelt erzeugen.
@@ -108,11 +106,65 @@ Kampf/Schaden, Speicherformat/Restore, Worker und plattformübergreifender Locks
 Der private Solver bleibt verhaltenserhaltend extrahiertes JavaScript; die öffentliche
 Fassade und Verbrauchergrenze sind strikt typgeprüft, nicht schon sämtliche Solver-Interna.
 
+## Oberflächenvertrag
+
+```ts
+const surface = createHeightfield({
+  width: 48, depth: 72, cellSize: 2,
+  origin: { x: 100, z: -90 }, // kleinste X/Z-Ecke, unabhängig von der Speicherreihenfolge
+  rowOrder: 'decreasing-z', diagonal: 'a-d', boundary: 'reject',
+  heights: new Float32Array(25 * 37), // tatsächliche Höhen in Weltmetern
+});
+```
+
+Ohne `origin` liegt das Rechteck zentriert um `(0,0)`. `halfSize` ist die alternative
+Kurzschreibweise für ein zentriertes Quadrat, nicht zusammen mit `width`, `depth`
+oder `origin` verwenden. Beide Ausdehnungen müssen ganze Vielfache von `cellSize`
+mit mindestens zwei Zellen sein. Es gibt kein quadratisches Padding.
+
+`columns` und `rows` sind **Zellenzahlen**; `heights` enthält
+`(columns + 1) * (rows + 1)` Vertices. Spalten laufen immer in Richtung +X.
+`rowOrder` bestimmt die Zeilenrichtung: `increasing-z` (Standard) von `bounds.minZ`
+nach `bounds.maxZ`, `decreasing-z` umgekehrt. Für die vier Speicherindizes
+`a = row * (columns + 1) + column`, `b = a + 1`, `c = a + columns + 1`, `d = c + 1`
+verbindet `diagonal: 'b-c'` (Standard) die Vertices b/c, `a-d` die Vertices a/d.
+Diese Namen beziehen sich auf **Speicherindizes**, nicht Himmelsrichtungen.
+Zeilenumkehr allein verändert deshalb die physische Diagonale; eine beabsichtigte
+Umordnung muss auch die Diagonale wechseln. Keine Höhenneuberechnung oder Glättung.
+
+`heightAt` interpoliert innerhalb des tatsächlichen Dreiecks, `slopeAt` liefert
+dessen Gradient als Betrag, nicht Grad. `cellSlopeAt` liefert den größeren Gradienten
+beider Dreiecke der Zelle; Navigation verwendet genau diesen Wert, keine von der
+Diagonale abhängigen Stichproben. Höhen sind bereits in Weltmetern; das Package
+wendet keinen zweiten Höhenmaßstab an. Renderer und Picking müssen dieselben
+Dreiecke verwenden, auch bei anderer Speicherorientierung und passender Face-Winding.
+Kosmetisches Displacement ist keine zusätzliche Kollisionsoberfläche.
+
+`bounds` ist eine eingefrorene Kopie der tatsächlichen Ausdehnung. `contains(x,z)`
+prüft endliche Punkte einschließlich der Außenkante. Für Abfragen außerhalb gilt
+`boundary: 'clamp'` (Standard) oder `reject` (`RangeError`); nichtendliche Höhen-/
+Steigungsabfragen sind immer Fehler. Clamping erweitert weder Navigation noch
+Spawn-/Zielraum. Die Navigation sperrt konservativ den Rand und benötigt zusätzlichen
+Platz für den Körperradius. Portale außerhalb der Karte sind keine gültigen Befehlsziele.
+
+Navigation und Höhenfeld verwenden weiterhin dieselbe Zellenweite. Ein 2-m-Feld
+wird direkt unterstützt, ohne es auf die Demo-Auflösung von 0,5 m umzubauen.
+Die konservative Rasterfreistellung kann dabei enge, geometrisch eigentlich ausreichend
+breite Durchgänge sperren. Erreichbarkeit gilt pro Bewegungsprofil, nicht pauschal
+für eine Karte; `maxSlope` und Körperradien werden nicht an Generatorwerte angepasst.
+Eine getrennte Navigationsauflösung, dynamische Blocker oder ein Terrain-Importer
+sind damit nicht implementiert. Große Karten können trotz grobem Gitter wegen der
+globalen Spawn-/Formationssuche aufwendig sein.
+
 ## Prüfen und messen
 
 `npm run test:crowd` baut und prüft den TypeScript-Verbraucher, öffentliche Verträge,
 Entfernung bei laufender Recovery und exakte Vergleiche mit vor der Extraktion
-aufgezeichneten Szenen sowie Interpolation und Instanzposen. `npm run check:crowd-browser` prüft die Demo technisch im
+aufgezeichneten Szenen sowie Interpolation und Instanzposen. Synthetische Höhenfelder
+prüfen beide Zeilenrichtungen/Diagonalen gegen ein unabhängiges Dreiecksmesh;
+rechteckige 2-m-Karten prüfen Körperfreiheit, Gegenverkehr, vollständige Ankunft,
+Kontakt/Rückzug und reine Renderinterpolation. Es werden keine Daten oder Module
+einer Terrainanwendung verwendet. `npm run check:crowd-browser` prüft die Demo technisch im
 lokalen Chromium, ohne Download. `CHROMIUM_PATH` überschreibt dessen Pfad.
 
 Die beibehaltenen Einzelregressionen liegen unter `tests/check-*.mjs`, beispielsweise
@@ -122,6 +174,11 @@ vollständige Marine-Ankünfte bis 2.000; `check-contact.mjs` Gruppenverkehr/Kon
 Fälle sind nicht Teil des kurzen Standard-Packagechecks.
 `check-package-scale.mjs` prüft zusätzlich über die tatsächlich gebaute öffentliche
 API vollständige Ankünfte von 2.000 Marines und 500 Marines mit 63 Panzern.
+`node packages/crowd-simulation/tests/check-rectangular.mjs --scale` ergänzt einen
+synthetischen 128 × 192-m-Fall mit 2.000 kleinen Körpern sowie einen 320 × 480-m-Fall
+mit 500 kleinen und 63 großen Körpern, beide im 2-m-Raster mit Hindernisumweg;
+der Mischfall enthält Gegenverkehr. Er verlangt vollständige Ankunft einschließlich
+stabiler Parkplätze; das Zeitbudget berücksichtigt auch Umwege um die geparkte Formation.
 
 `tests/measure.mjs` misst kurze CPU-Phasen; `tests/measure-render.mjs` vergleicht
 vollständigen Poseaufbau mit unveränderter Pause. Letzteres invalidiert nur die

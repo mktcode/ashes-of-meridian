@@ -5,9 +5,9 @@ Das Landschaftslabor/Karteneditor aus dem Parallelrepository `../../aom-shader/`
 keine Implementierungs-, Balancing- oder Testfreigabe. Vor Übernahme den dortigen
 Arbeitsstand einschließlich noch uncommittierter Export-/Importarbeit sichern.
 
-Die Quellsichtung bezieht sich auf das Crowd-Package in `14edb4f`; ein gemeinsamer
-technischer Integrationsnachweis fehlt. Die [Crowd-Simulation](../../packages/crowd-simulation/README.md)
-ist bislang nicht an das eigentliche Spiel angebunden. Package-Übernahme,
+Ein gemeinsamer technischer Integrationsnachweis fehlt. Die
+[Crowd-Simulation](../../packages/crowd-simulation/README.md) bietet einen generischen
+rechteckigen Höhenfeldvertrag, ist aber weder an das Labor noch das eigentliche Spiel angebunden. Package-Übernahme,
 Landschaft/Crowd-Demo und vollständige RTS-Anbindung sind getrennte Schritte.
 
 ## Ziel und Package-Grenzen
@@ -32,22 +32,23 @@ der [öffentlichen Fassade](../../packages/crowd-simulation/src/index.ts),
 dem [Höhenfeld](../../packages/crowd-simulation/src/navigation/heightfield.js)
 und der [Navigation](../../packages/crowd-simulation/src/navigation/navigation.js).
 
-- [ ] Rechteckige Laborkarte (520 × 640 m) gegen aktuell quadratisches Crowd-Feld
-  über `halfSize` abgleichen. Rechteckunterstützung oder eine bewusst begrenzte
-  Zwischenfläche entscheiden; aufgefüllte Bereiche dürfen nicht spielbar werden.
+- [ ] Rechteckige Laborkarte (520 × 640 m) mit tatsächlicher Ausdehnung und Ursprung
+  auf den Crowd-Höhenfeldvertrag abbilden. Kein quadratisches Padding und keine
+  künstlich spielbaren aufgefüllten Bereiche.
 - [ ] Rasterorientierung und Dreiecksteilung gemeinsam festlegen. Das Labor
   speichert Zeilen Süd → Nord, Crowd von −Z → +Z. **Bloßes Umdrehen der Zeilen
   verändert die physische Zellendiagonale.** Höhen/Steigungen zwischen Vertices
   können dann vom sichtbaren Terrain abweichen.
-- [ ] Steigungsabtastung an den Oberflächenvertrag binden: Die beiden aktuellen
-  Crowd-Proben setzen dessen Diagonale voraus. Andere Höhen-Callbacks allein
-  machen eine fremde Triangulierung nicht kompatibel. Die Fassade akzeptiert
-  außerdem nur selbst erzeugte Höhenfelder, keine beliebigen Surface-Objekte.
+- [ ] Speicherorientierung und Diagonale des Adapters gegen Laborgeometrie prüfen.
+  Crowd verwendet das Maximum beider tatsächlichen Dreieckssteigungen einer Zelle;
+  dazu müssen die übergebenen Höhen und Metadaten dieselbe physische Fläche beschreiben.
+  Die Fassade akzeptiert nur selbst erzeugte Höhenfelder, keine beliebigen Surface-Objekte.
 - [ ] Eine Oberfläche für Kollision, Navigation, Picking, Fuß-/Gebäudeauflage und
   Darstellung sicherstellen. Material-Displacement bleibt kosmetisch. Bereits
   exportierte Höhenskalierung nicht erneut auf Gameplay-Geometrie anwenden.
 - [ ] Randverhalten und Portale vereinbaren: Lab-Abfragen außerhalb liefern keinen
-  Boden; Crowd-Höhenabfragen klemmen, Navigation hält Körper vom Rand fern.
+  Boden; Crowd-Höhenabfragen klemmen oder verwerfen gemäß gewähltem `boundary`-Vertrag.
+  Navigation hält Körper unabhängig davon vom Rand fern.
   Spawn-/Zielbereiche deshalb innerhalb des nutzbaren Korridors festlegen.
 
 ## Weggarantie auf Bewegungsprofile beziehen
@@ -95,7 +96,8 @@ und der [Navigation](../../packages/crowd-simulation/src/navigation/navigation.j
 
 ## Empfohlene Reihenfolge und Abnahme
 
-1. Gemeinsamen Oberflächenvertrag einschließlich Diagonale, Rand und Skalierung entscheiden.
+1. Laboroberfläche einschließlich Diagonale, Rand und Skalierung auf den generischen
+   Crowd-Oberflächenvertrag abbilden und die tatsächliche Übereinstimmung belegen.
 2. Landschaftskern mit typisierter Package-Grenze und Offline-Build übernehmen.
 3. Kleine gemeinsame Demo mit importierter Landschaft, Marines und Panzern anbinden;
    noch kein komplettes Gefecht und kein Austausch bestehender Spielnavigation.

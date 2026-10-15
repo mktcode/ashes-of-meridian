@@ -1,10 +1,10 @@
 import { fixedDelta as fixedStep } from './constants.js';
 
 export function createSolver(terrain, navigation, recovery, contactMode = 'hostile-stop') {
-  const nav = navigation, halfSize = terrain.halfSize;
+  const nav = navigation, { bounds } = terrain;
   const diameter = nav.radius * 2;
   const contactDistance = 1.3, contactRelease = 1.7;
-  const bucketSize = 1.5, bucketCount = Math.ceil(halfSize * 2 / bucketSize);
+  const bucketSize = 1.5, bucketColumns = Math.ceil(terrain.width / bucketSize), bucketRows = Math.ceil(terrain.depth / bucketSize);
   const turns = [0, ...Array.from({ length: 11 }, (_, i) => [i + 1, -i - 1]).flat(), 12]
     .map(n => [Math.cos(n * Math.PI / 12), Math.sin(n * Math.PI / 12)]);
   /** @returns {import('./internal-types.js').SolverAgent} */
@@ -48,7 +48,8 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     unit.target = null; unit.navigation = null; unit.route = null; unit.waitingForRoute = false; unit.moving = false;
     unit.state = state; unit.disengage = false; unit.stalledFor = 0; unit.vx = unit.vz = 0;
   }
-  const bucket = value => Math.max(0, Math.min(bucketCount - 1, Math.floor((value + halfSize) / bucketSize)));
+  const bucketX = value => Math.max(0, Math.min(bucketColumns - 1, Math.floor((value - bounds.minX) / bucketSize)));
+  const bucketZ = value => Math.max(0, Math.min(bucketRows - 1, Math.floor((value - bounds.minZ) / bucketSize)));
   function availableSlots(world, group, pool, count, used = group.reservedSlots, commanded = new Set()) {
     if (count <= 0) return [];
     const blockers = new Map(), ownRadius = navigationFor(group).radius;
@@ -57,7 +58,7 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     for (const m of world.units) {
       const p = m.group !== group.id ? m.target || (!m.moving ? m : null) : !m.target && !commanded.has(m) ? m : null;
       if (!p) continue;
-      const key = bucket(p.z) * bucketCount + bucket(p.x);
+      const key = bucketZ(p.z) * bucketColumns + bucketX(p.x);
       if (!blockers.has(key)) blockers.set(key, []);
       const clearance = m.target ? ownRadius + m.radius + passageRadius * 2 + 0.15 : ownRadius + m.radius + 0.05;
       reach = Math.max(reach, clearance); blockers.get(key).push({ point: p, clearance });
@@ -66,9 +67,9 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     for (const p of pool) {
       if (used.has(p)) continue;
       let clear = true;
-      for (let z = bucket(p.z - reach); z <= bucket(p.z + reach) && clear; z++) {
-        for (let x = bucket(p.x - reach); x <= bucket(p.x + reach) && clear; x++) {
-          for (const b of blockers.get(z * bucketCount + x) || []) {
+      for (let z = bucketZ(p.z - reach); z <= bucketZ(p.z + reach) && clear; z++) {
+        for (let x = bucketX(p.x - reach); x <= bucketX(p.x + reach) && clear; x++) {
+          for (const b of blockers.get(z * bucketColumns + x) || []) {
             if (Math.hypot(p.x - b.point.x, p.z - b.point.z) < b.clearance - 1e-8) { clear = false; break; }
           }
         }
@@ -93,23 +94,23 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     const targets = group.field ? availableSlots(world, group, group.slotPool, limit) : [];
     const capacity = group.field ? targets.length : limit;
     if (!capacity) return [];
-    const added = [], heads = new Int32Array(bucketCount ** 2).fill(-1), links = new Int32Array(world.units.length + capacity);
+    const added = [], heads = new Int32Array(bucketColumns * bucketRows).fill(-1), links = new Int32Array(world.units.length + capacity);
     const insert = i => {
-      const m = world.units[i], key = bucket(m.z) * bucketCount + bucket(m.x);
+      const m = world.units[i], key = bucketZ(m.z) * bucketColumns + bucketX(m.x);
       largest = Math.max(largest, m.radius);
       links[i] = heads[key]; heads[key] = i;
     };
     for (let i = 0; i < world.units.length; i++) insert(i);
-    const sites = group.spawnSites || (group.spawn.x === 0 && group.spawn.z === 0 ? nav.spawnSites
+    const sites = group.spawnSites || (group.spawn.x === nav.center.x && group.spawn.z === nav.center.z ? nav.spawnSites
       : nav.spawnSites.slice().sort((a, b) => (a.x - group.spawn.x) ** 2 + (a.z - group.spawn.z) ** 2
         - (b.x - group.spawn.x) ** 2 - (b.z - group.spawn.z) ** 2 || a.z - b.z || a.x - b.x));
     // A batch scans the unchanged site order once; new bodies cannot free earlier sites.
     for (const point of sites) {
-      const bx = bucket(point.x), bz = bucket(point.z), range = Math.ceil((nav.radius + largest + 0.03) / bucketSize);
+      const bx = bucketX(point.x), bz = bucketZ(point.z), range = Math.ceil((nav.radius + largest + 0.03) / bucketSize);
       let occupied = false;
-      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range) && !occupied; z++) {
-        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range) && !occupied; x++) {
-          for (let i = heads[z * bucketCount + x]; i >= 0; i = links[i]) {
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketRows - 1, bz + range) && !occupied; z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketColumns - 1, bx + range) && !occupied; x++) {
+          for (let i = heads[z * bucketColumns + x]; i >= 0; i = links[i]) {
             const m = world.units[i];
             if (Math.hypot(m.x - point.x, m.z - point.z) < nav.radius + m.radius + 0.03) { occupied = true; break; }
           }
@@ -317,7 +318,7 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
   function scratchFor(world) {
     const n = world.units.length;
     if (!world.scratch || world.scratch.links.length !== n) {
-      world.scratch = { heads: new Int32Array(bucketCount ** 2), links: new Int32Array(n), contacts: new Int32Array(n),
+      world.scratch = { heads: new Int32Array(bucketColumns * bucketRows), links: new Int32Array(n), contacts: new Int32Array(n),
         startX: new Float64Array(n), startZ: new Float64Array(n), vx: new Float64Array(n), vz: new Float64Array(n),
         pushX: new Float64Array(n), pushZ: new Float64Array(n), remaining: new Float64Array(n) };
     }
@@ -326,17 +327,17 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
   function buildBuckets(units, scratch) {
     scratch.heads.fill(-1);
     for (let i = 0; i < units.length; i++) {
-      const key = bucket(units[i].z) * bucketCount + bucket(units[i].x);
+      const key = bucketZ(units[i].z) * bucketColumns + bucketX(units[i].x);
       scratch.links[i] = scratch.heads[key]; scratch.heads[key] = i;
     }
   }
   function pairs(world, scratch, visit) {
     const units = world.units;
     for (let i = 0; i < units.length; i++) {
-      const bx = bucket(units[i].x), bz = bucket(units[i].z), range = Math.ceil((units[i].radius + scratch.maxRadius) / bucketSize);
-      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range); z++) {
-        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range); x++) {
-          for (let j = scratch.heads[z * bucketCount + x]; j >= 0; j = scratch.links[j]) {
+      const bx = bucketX(units[i].x), bz = bucketZ(units[i].z), range = Math.ceil((units[i].radius + scratch.maxRadius) / bucketSize);
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketRows - 1, bz + range); z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketColumns - 1, bx + range); x++) {
+          for (let j = scratch.heads[z * bucketColumns + x]; j >= 0; j = scratch.links[j]) {
             if (j <= i) continue;
             world.stats.neighbourChecks++; visit(i, j);
           }
@@ -352,9 +353,9 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
       const m = units[i], team = world.groups[m.group].team;
       let nearest = Infinity, nearEnemy = false;
       const reach = m.radius + s.maxRadius + 0.9;
-      for (let z = bucket(m.z - reach); z <= bucket(m.z + reach); z++) {
-        for (let x = bucket(m.x - reach); x <= bucket(m.x + reach); x++) {
-          for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
+      for (let z = bucketZ(m.z - reach); z <= bucketZ(m.z + reach); z++) {
+        for (let x = bucketX(m.x - reach); x <= bucketX(m.x + reach); x++) {
+          for (let j = s.heads[z * bucketColumns + x]; j >= 0; j = s.links[j]) {
             if (j === i || world.groups[units[j].group].team === team) continue;
             world.stats.contactChecks++;
             const other = units[j], dx = other.x - m.x, dz = other.z - m.z, distance = Math.hypot(dx, dz);
@@ -458,10 +459,10 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     for (let i = 0; i < units.length; i++) {
       const speed = Math.hypot(s.vx[i], s.vz[i]);
       if (speed < 1e-6) continue;
-      const nearby = [], bx = bucket(units[i].x), bz = bucket(units[i].z), range = Math.ceil((units[i].radius + s.maxRadius + 0.6) / bucketSize);
-      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range); z++) {
-        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range); x++) {
-          for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
+      const nearby = [], bx = bucketX(units[i].x), bz = bucketZ(units[i].z), range = Math.ceil((units[i].radius + s.maxRadius + 0.6) / bucketSize);
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketRows - 1, bz + range); z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketColumns - 1, bx + range); x++) {
+          for (let j = s.heads[z * bucketColumns + x]; j >= 0; j = s.links[j]) {
             if (j === i) continue;
             world.stats.neighbourChecks++;
             if (Math.hypot(units[i].x - units[j].x, units[i].z - units[j].z) < units[i].radius + units[j].radius + 0.6) nearby.push(j);
@@ -515,10 +516,10 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
       const distance = unit.target ? Math.hypot(unit.target.x - unit.x, unit.target.z - unit.z) : 0;
       let snapClear = true;
       if (unit.target && distance > 0 && distance <= 0.03) {
-        const bx = bucket(unit.target.x), bz = bucket(unit.target.z), range = Math.ceil((unit.radius + s.maxRadius) / bucketSize);
-        for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range) && snapClear; z++) {
-          for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range) && snapClear; x++) {
-            for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
+        const bx = bucketX(unit.target.x), bz = bucketZ(unit.target.z), range = Math.ceil((unit.radius + s.maxRadius) / bucketSize);
+        for (let z = Math.max(0, bz - range); z <= Math.min(bucketRows - 1, bz + range) && snapClear; z++) {
+          for (let x = Math.max(0, bx - range); x <= Math.min(bucketColumns - 1, bx + range) && snapClear; x++) {
+            for (let j = s.heads[z * bucketColumns + x]; j >= 0; j = s.links[j]) {
               if (i === j) continue;
               world.stats.neighbourChecks++;
               if (Math.hypot(unit.target.x - units[j].x, unit.target.z - units[j].z) < unit.radius + units[j].radius - 1e-5) { snapClear = false; break; }
@@ -556,6 +557,6 @@ export function createSolver(terrain, navigation, recovery, contactMode = 'hosti
     recover(world);
     world.stats.steps++;
   }
-  return { halfSize, contactDistance, contactRelease, createAgent, createWorld, createGroup, spawnAgent, spawnAgents,
+  return { bounds, contactDistance, contactRelease, createAgent, createWorld, createGroup, spawnAgent, spawnAgents,
     moveTo, hold, setTeam, tick, removeAgents };
 }

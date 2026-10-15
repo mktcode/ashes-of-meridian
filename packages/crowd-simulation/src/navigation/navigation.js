@@ -1,39 +1,41 @@
-export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
-  const halfSize = surface.halfSize, cells = halfSize * 2 / cellSize, classes = new Map();
-  const count = cells * cells;
+export function createNavigation(surface, obstacles, profiles, cellSize = surface.cellSize) {
+  const { bounds, columns, rows, width, depth } = surface, classes = new Map();
+  const { minX, minZ, maxX, maxZ } = bounds;
+  const center = { x: minX + width / 2, z: minZ + depth / 2 };
+  const count = columns * rows;
   const offsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
   function indexAt(x, z) {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || x < -halfSize || z < -halfSize || x >= halfSize || z >= halfSize) return -1;
-    return Math.floor((z + halfSize) / cellSize) * cells + Math.floor((x + halfSize) / cellSize);
+    if (!Number.isFinite(x) || !Number.isFinite(z) || x < minX || z < minZ || x >= maxX || z >= maxZ) return -1;
+    return Math.floor((z - minZ) / cellSize) * columns + Math.floor((x - minX) / cellSize);
   }
   function pointAt(index) {
-    return { x: -halfSize + (index % cells + 0.5) * cellSize, z: -halfSize + (Math.floor(index / cells) + 0.5) * cellSize };
+    return { x: minX + (index % columns + 0.5) * cellSize, z: minZ + (Math.floor(index / columns) + 0.5) * cellSize };
   }
   function create(profile) {
   const { radius, maxSlope, maxSpeed, traffic } = profile;
   const steep = new Uint8Array(count);
   for (let i = 0; i < count; i++) {
-    const { x, z } = pointAt(i), offset = cellSize / 4;
-    steep[i] = Math.max(surface.slopeAt(x - offset, z - offset), surface.slopeAt(x + offset, z + offset)) > maxSlope ? 1 : 0;
+    const { x, z } = pointAt(i);
+    steep[i] = surface.cellSlopeAt(x, z) > maxSlope ? 1 : 0;
   }
   const parkingSpacing = radius * 4 + 0.15, clearance = Math.ceil(radius / cellSize);
   const walkable = new Uint8Array(count), neighbours = new Int32Array(count * 8).fill(-1);
   // Conservative footprint clearance: whole navigation cells stay clear of blocked triangles/boxes.
-  for (let iz = clearance; iz < cells - clearance; iz++) for (let ix = clearance; ix < cells - clearance; ix++) {
-    const i = iz * cells + ix, { x, z } = pointAt(i);
+  for (let iz = clearance; iz < rows - clearance; iz++) for (let ix = clearance; ix < columns - clearance; ix++) {
+    const i = iz * columns + ix, { x, z } = pointAt(i);
     let blocked = false;
-    for (let dz = -clearance; dz <= clearance; dz++) for (let dx = -clearance; dx <= clearance; dx++) blocked ||= Boolean(steep[(iz + dz) * cells + ix + dx]);
+    for (let dz = -clearance; dz <= clearance; dz++) for (let dx = -clearance; dx <= clearance; dx++) blocked ||= Boolean(steep[(iz + dz) * columns + ix + dx]);
     for (const box of obstacles) blocked ||= Math.abs(x - box.x) <= box.width / 2 + radius + cellSize / 2
       && Math.abs(z - box.z) <= box.depth / 2 + radius + cellSize / 2;
     walkable[i] = blocked ? 0 : 1;
   }
   for (let i = 0; i < count; i++) {
     if (!walkable[i]) continue;
-    const ix = i % cells, iz = Math.floor(i / cells);
+    const ix = i % columns, iz = Math.floor(i / columns);
     for (let n = 0; n < offsets.length; n++) {
-      const [dx, dz] = offsets[n], j = (iz + dz) * cells + ix + dx;
+      const [dx, dz] = offsets[n], j = (iz + dz) * columns + ix + dx;
       if (!walkable[j]) continue;
-      if (dx && dz && (!walkable[iz * cells + ix + dx] || !walkable[(iz + dz) * cells + ix])) continue;
+      if (dx && dz && (!walkable[iz * columns + ix + dx] || !walkable[(iz + dz) * columns + ix])) continue;
       neighbours[i * 8 + n] = j;
     }
   }
@@ -45,8 +47,8 @@ export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
     for (let step = 1; step <= steps; step++) {
       const t = step / steps, next = indexAt(x + (tx - x) * t, z + (tz - z) * t);
       if (next < 0 || !walkable[next]) return false;
-      const dx = next % cells - previous % cells, dz = Math.floor(next / cells) - Math.floor(previous / cells);
-      if (dx && dz && (!walkable[previous + dx] || !walkable[previous + dz * cells])) return false;
+      const dx = next % columns - previous % columns, dz = Math.floor(next / columns) - Math.floor(previous / columns);
+      if (dx && dz && (!walkable[previous + dx] || !walkable[previous + dz * columns])) return false;
       previous = next;
     }
     return true;
@@ -93,7 +95,7 @@ export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
       }
     }
     for (let i = 0; i < count; i++) if (next[i] >= 0) {
-      const dx = next[i] % cells - i % cells, dz = Math.floor(next[i] / cells) - Math.floor(i / cells), length = Math.hypot(dx, dz);
+      const dx = next[i] % columns - i % columns, dz = Math.floor(next[i] / columns) - Math.floor(i / columns), length = Math.hypot(dx, dz);
       flowX[i] = dx / length; flowZ[i] = dz / length;
     }
     return { goal, point: { x: point.x, z: point.z }, cost, next, flowX, flowZ };
@@ -101,12 +103,12 @@ export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
   function direction(field, x, z) {
     const index = indexAt(x, z);
     if (index < 0 || !Number.isFinite(field.cost[index])) return { x: 0, z: 0 };
-    const gx = (x + halfSize) / cellSize - 0.5, gz = (z + halfSize) / cellSize - 0.5;
+    const gx = (x - minX) / cellSize - 0.5, gz = (z - minZ) / cellSize - 0.5;
     const ix = Math.floor(gx), iz = Math.floor(gz), u = gx - ix, v = gz - iz;
     let dx = 0, dz = 0;
     for (let oz = 0; oz <= 1; oz++) for (let ox = 0; ox <= 1; ox++) {
-      if (ix + ox < 0 || ix + ox >= cells || iz + oz < 0 || iz + oz >= cells) continue;
-      const i = (iz + oz) * cells + ix + ox;
+      if (ix + ox < 0 || ix + ox >= columns || iz + oz < 0 || iz + oz >= rows) continue;
+      const i = (iz + oz) * columns + ix + ox;
       const weight = (ox ? u : 1 - u) * (oz ? v : 1 - v);
       dx += field.flowX[i] * weight; dz += field.flowZ[i] * weight;
     }
@@ -158,7 +160,7 @@ export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
   function places(point, limit, field = null, direction = null, passage = null) {
     // Both body-to-body lanes and wall clearance must fit the largest participating class.
     const passageRadius = passage?.radius || radius, canPass = passage?.canStand || canStand;
-    const candidates = [], spacing = radius * 2 + Math.max(radius, passageRadius) * 2 + 0.15, rings = Math.ceil(halfSize * 4 / spacing);
+    const candidates = [], spacing = radius * 2 + Math.max(radius, passageRadius) * 2 + 0.15, rings = Math.ceil(Math.max(width, depth) * 2 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
       const dx = spacing * (q + r / 2), dz = spacing * Math.sqrt(3) / 2 * r;
       const x = point.x + (direction ? direction.x * dx - direction.z * dz : dx);
@@ -184,8 +186,8 @@ export function createNavigation(surface, obstacles, profiles, cellSize = 0.5) {
     });
     return candidates.slice(0, limit).map(({ x, z }) => ({ x, z }));
   }
-  const spawnSites = places({ x: 0, z: 0 }, count);
-  return { halfSize, cellSize, cells, radius, maxSlope, maxSpeed, traffic, parkingSpacing, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
+  const spawnSites = places(center, count);
+  return { bounds, width, depth, columns, rows, center, cellSize, radius, maxSlope, maxSpeed, traffic, parkingSpacing, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
   }
   function forProfile(id) {
     if (typeof id !== 'string' || !Object.hasOwn(profiles, id)) return null;

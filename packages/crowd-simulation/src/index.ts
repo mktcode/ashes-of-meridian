@@ -9,6 +9,7 @@ import type {
   GroupId,
   OrderId,
   Heightfield,
+  HeightfieldOptions,
   NavigationWorld,
   NavigationOptions,
   Crowd,
@@ -27,11 +28,7 @@ const validPoint = (p: unknown): p is { x: number; z: number } =>
   Number.isFinite((p as { z: number }).z);
 const validId = (id: number) => Number.isSafeInteger(id) && id >= 0;
 
-export function createHeightfield(options: {
-  halfSize: number;
-  cellSize: number;
-  heights: ArrayLike<number>;
-}): Heightfield {
+export function createHeightfield(options: HeightfieldOptions): Heightfield {
   const surface = bakeHeightfield(options) as Heightfield;
   surfaces.add(surface);
   return surface;
@@ -42,8 +39,7 @@ export function createNavigationWorld(options: NavigationOptions): NavigationWor
   const cellSize = options.cellSize ?? surface?.cellSize;
   if (!surfaces.has(surface))
     throw new TypeError('Use createHeightfield for the navigation surface');
-  const cells = (surface.halfSize * 2) / cellSize;
-  if (!(cellSize > 0) || cellSize !== surface.cellSize || !Number.isSafeInteger(cells) || cells < 2)
+  if (!(cellSize > 0) || cellSize !== surface.cellSize)
     throw new RangeError('Navigation grid must match the surface triangles');
   if (!profiles || !Object.keys(profiles).length)
     throw new RangeError('At least one movement profile is required');

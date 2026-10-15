@@ -2,11 +2,12 @@ import { fixture } from './fixture.mjs';
 import assert from 'node:assert/strict';
 
 const { nav, terrain, core, createFixtureWorld } = fixture();
-assert.equal(nav.halfSize, 64);
-assert.equal(nav.cells, 256);
+assert.deepEqual(nav.bounds, { minX: -64, minZ: -64, maxX: 64, maxZ: 64 });
+assert.equal(nav.columns, 256);
+assert.equal(nav.rows, 256);
 assert.equal(nav.obstacles.length, 9);
 assert.ok(nav.canStand(0, 0));
-const rim = nav.halfSize - 1;
+const rim = nav.bounds.maxX - 1;
 for (const [x, z] of [[rim, 0], [-rim, 0], [0, rim], [0, -rim], [rim, rim], ...nav.obstacles.map(b => [b.x, b.z])]) {
   assert.equal(nav.canStand(x, z), false, 'rock and steep rim are blocked');
   assert.equal(nav.buildField({ x, z }), null, 'blocked goals do not generate a flow field');
@@ -65,4 +66,4 @@ assert.equal(core.spawnAgent(full), null, 'finite map capacity fails gracefully'
 assert.equal(JSON.stringify(full), snapshot);
 core.update(full, 1 / 60);
 assert.ok(full.stats.neighbourChecks < full.units.length * (full.units.length - 1) / 2, 'spread idle crowd uses local buckets, not all-pairs collision checks');
-console.log(`Navigation: ${nav.cells}×${nav.cells} shared grid, exact slope/footprint clearance, deterministic Dijkstra, safe flow edges, parking lanes, capacity and local neighbour search checked.`);
+console.log(`Navigation: ${nav.columns}×${nav.rows} shared grid, exact slope/footprint clearance, deterministic Dijkstra, safe flow edges, parking lanes, capacity and local neighbour search checked.`);
