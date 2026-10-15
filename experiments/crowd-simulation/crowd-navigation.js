@@ -129,7 +129,44 @@ const CrowdNavigation = (() => {
     const distance = Math.hypot(dx, dz);
     return distance > 1e-6 ? { x: dx / distance, z: dz / distance } : { x: 0, z: 0 };
   }
-  function places(point, limit, field = null, visible = true, direction = null) {
+  function prepareTarget(field, target) {
+    if (target.approach) return target.approach;
+    // Reverse the existing destination tree; no per-unit grid search or extra global field.
+    const raw = [{ x: target.x, z: target.z }];
+    if (!canTravel(field.point.x, field.point.z, target.x, target.z)) {
+      for (let i = indexAt(target.x, target.z); i >= 0; i = field.next[i]) {
+        raw.push(pointAt(i));
+        if (i === field.goal) break;
+      }
+    }
+    raw.push({ x: field.point.x, z: field.point.z }); raw.reverse();
+    const points = [raw[0]];
+    let anchor = raw[0], last = anchor;
+    for (let i = 1; i < raw.length; i++) {
+      const p = raw[i];
+      if (!canTravel(anchor.x, anchor.z, p.x, p.z)) { points.push(last); anchor = last; }
+      last = p;
+    }
+    if (Math.hypot(last.x - anchor.x, last.z - anchor.z) > 1e-8) points.push(last);
+    let remaining = 0;
+    for (let i = points.length - 1; i >= 0; i--) {
+      points[i].remaining = remaining;
+      if (i) remaining += Math.hypot(points[i].x - points[i - 1].x, points[i].z - points[i - 1].z);
+    }
+    target.approach = points;
+    return points;
+  }
+  function travelDistance(field, target, x, z) {
+    if (canTravel(x, z, target.x, target.z)) return Math.hypot(x - target.x, z - target.z);
+    const points = prepareTarget(field, target);
+    let distance = field.cost[indexAt(x, z)] + points[0].remaining;
+    for (let i = 1; i < points.length - 1; i++) {
+      const p = points[i];
+      if (canTravel(x, z, p.x, p.z)) distance = Math.min(distance, Math.hypot(x - p.x, z - p.z) + p.remaining);
+    }
+    return distance;
+  }
+  function places(point, limit, field = null, direction = null) {
     // Leave passing lanes between parked bodies instead of sealing off inner slots.
     const candidates = [], spacing = radius * 4 + 0.15, rings = Math.ceil(halfSize * 4 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
@@ -139,18 +176,24 @@ const CrowdNavigation = (() => {
       if (!canStand(x, z) || field && !Number.isFinite(field.cost[indexAt(x, z)])) continue;
       // Park away from walls/cliffs so a resting marine cannot seal the last passing lane.
       if (offsets.some(([dx, dz]) => !canStand(x + dx * (radius * 2 + 0.05), z + dz * (radius * 2 + 0.05)))) continue;
-      if (visible && !canTravel(point.x, point.z, x, z)) continue;
-      candidates.push({ x, z });
+      const center = field ? pointAt(indexAt(x, z)) : null, end = field ? pointAt(field.goal) : null;
+      // Direct paths keep exact symmetric distances; hidden slots use the shared walking distance.
+      const distance = field && !canTravel(point.x, point.z, x, z)
+        ? field.cost[indexAt(x, z)] + Math.hypot(x - center.x, z - center.z) + Math.hypot(point.x - end.x, point.z - end.z)
+        : Math.hypot(x - point.x, z - point.z);
+      candidates.push({ x, z, distance });
     }
     candidates.sort((a, b) => {
+      const walking = field ? a.distance - b.distance : 0;
+      if (Math.abs(walking) > 1e-8) return walking;
       const radial = (a.x - point.x) ** 2 + (a.z - point.z) ** 2 - (b.x - point.x) ** 2 - (b.z - point.z) ** 2;
       if (!direction || Math.abs(radial) > 1e-8) return radial || a.z - b.z || a.x - b.x;
       // Equal-radius slots fill the far side first; ignore roundoff from rotating the lattice.
       const forward = (b.x - a.x) * direction.x + (b.z - a.z) * direction.z;
       return Math.abs(forward) > 1e-8 ? forward : (a.z - b.z) * direction.x - (a.x - b.x) * direction.z;
     });
-    return candidates.slice(0, limit);
+    return candidates.slice(0, limit).map(({ x, z }) => ({ x, z }));
   }
-  const spawnSites = places({ x: 0, z: 0 }, count, null, false);
-  return { halfSize, cellSize, cells, radius, maxSlope, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, places, spawnSites };
+  const spawnSites = places({ x: 0, z: 0 }, count);
+  return { halfSize, cellSize, cells, radius, maxSlope, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
 })();

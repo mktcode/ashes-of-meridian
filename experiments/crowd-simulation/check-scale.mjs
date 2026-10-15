@@ -86,4 +86,9 @@ for (const [count, goal, seconds] of [[100, { x: -32, z: 32 }, 100], [500, { x: 
     assert.equal(world.stats.fieldBuilds, 2);
   }
 }
-console.log('Scale: actual 100/500/1000/2000 arrivals, 1010-unit late arrival and redirect, local work, terrain, separation, immutable parked bodies, rows, pause and batch/late-spawn semantics checked. CPU timings are not GPU/FPS guarantees.');
+const central = core.createWorld(); assert.equal(core.spawnMarines(central, 1999).length, 1999);
+settle(central, { x: 0, z: 7 }, 180, '2000-central-occluded-arrival');
+const hidden = central.marines.filter(m => !nav.canTravel(central.destination.x, central.destination.z, m.target.x, m.target.z));
+assert.ok(hidden.length > 200, 'the central crowd actually occupies reachable obstacle shadows');
+assert.equal(central.stats.fieldBuilds, 1);
+console.log(`Scale: actual 100/500/1000/2000 arrivals, 1010-unit late arrival and redirect, ${hidden.length} occluded reservations in the central 2000-unit crowd, local work, terrain, separation, immutable parked bodies, rows, pause and batch/late-spawn semantics checked. CPU timings are not GPU/FPS guarantees.`);

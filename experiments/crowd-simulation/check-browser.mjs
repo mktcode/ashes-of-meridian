@@ -126,6 +126,24 @@ try {
   await page.click('#focus'); await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2); await page.mouse.wheel(0, -2000);
   await page.waitForFunction(() => window.drawCount < world.marines.length * MarineModel.parts.length);
   assert.equal(await page.evaluate(() => JSON.stringify(world.marines)), frozen, 'culling and zoom do not alter simulation');
+  const arrival = await page.evaluate(() => {
+    const core = CrowdSimulation, nav = CrowdNavigation, goal = { x: 0, z: 7 };
+    if (!core.moveTo(world, goal)) throw new Error('Central browser command rejected');
+    const hidden = world.marines.filter(m => !nav.canTravel(goal.x, goal.z, m.target.x, m.target.z));
+    const m = hidden[0], field = world.field, target = m.target;
+    world.marines = [m]; m.x = goal.x; m.z = goal.z; m.y = CrowdTerrain.heightAt(m.x, m.z);
+    Object.assign(m.previous, { x: m.x, z: m.z });
+    const before = world.stats.recoveryAttempts;
+    let tick = 0;
+    for (; tick < 1800; tick++) { core.update(world, 1 / 60); if (!m.moving && m.runWeight < 0.001) break; }
+    return { hidden: hidden.length, arrived: tick < 1800 && m.x === target.x && m.z === target.z,
+      unchanged: world.field === field && m.target === target, fields: world.stats.fieldBuilds,
+      recovery: world.stats.recoveryAttempts - before };
+  });
+  assert.ok(arrival.hidden > 100); assert.equal(arrival.arrived, true); assert.equal(arrival.unchanged, true);
+  assert.equal(arrival.fields, 2); assert.equal(arrival.recovery, 0);
+  await page.click('#focus');
+  await page.waitForFunction(() => window.drawCount === CrowdNavigation.obstacles.length + 2 + MarineModel.parts.length);
   const glError = await page.evaluate(() => window.gl.getError()); assert.equal(glError, 0); assert.deepEqual(errors, []);
-  console.log('Browser file://: real instanced GPU buffers/attributes, interpolation, terrain feet, pause cache, focus/pan/zoom, native goal/blocked picking, 1000-unit batch inheritance/culling and shader/GL errors checked.');
+  console.log('Browser file://: real instanced GPU buffers/attributes, interpolation, terrain feet, pause cache, focus/pan/zoom, native goal/blocked picking, 1000-unit batch inheritance/culling, occluded reservation arrival without recovery and shader/GL errors checked.');
 } finally { await browser.close(); }

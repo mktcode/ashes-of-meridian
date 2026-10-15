@@ -27,9 +27,17 @@ erreichbare Ziele ändern den alten Befehl nicht.
 Das statische Raster entsteht einmal. Dijkstra berechnet das gemeinsame Feld bei
 einem neuen Ziel, nicht pro Marine oder Frame. Räumliche Nachbarsuche, lokale
 Geschwindigkeitsproben und gleichzeitige Bewegung vermeiden globale Paarvergleiche.
-Am Ziel erhält jeder einen eigenen Standplatz mit Durchgängen. Vordere Marines füllen
-die gegenüberliegende Seite, Nachzügler die Ankunftsseite; seitliche Reihenfolge bleibt
-möglichst erhalten. Bereits geparkte Marines und ihre Reservierungen bleiben fest.
+Am Ziel erhält jeder einen eigenen Standplatz mit Durchgängen. Die Fläche wächst nach
+begehbarer Wegdistanz, auch hinter Hindernissen, statt auf freie Geraden zum Klickpunkt
+beschränkt zu bleiben. Vordere Marines füllen die gegenüberliegende Seite, Nachzügler
+die Ankunftsseite; seitliche Reihenfolge bleibt möglichst erhalten. Bereits geparkte
+Marines und ihre Reservierungen bleiben fest.
+
+Die Anfahrt zum eigenen Standplatz nutzt bei Bedarf umgekehrte Zweige desselben
+Dijkstra-Wegebaums. Sie werden einmal pro Reservierung abgeleitet und mit geprüften
+Geraden verdichtet, nicht durch eine weitere globale Suche pro Einheit berechnet.
+Einheiten können sichtbare spätere Wegpunkte direkt anfahren; ihr Fortschritt zählt
+auch dann, wenn der nötige Weg vom gemeinsamen Klickpunkt wegführt.
 
 Recovery erkennt fehlenden Fortschritt auch bei Bewegung im Kreis. Legitime Umwege
 zählen als Fortschritt; erfolglose Rettungsversuche löschen den Stillstand nicht.
@@ -81,6 +89,7 @@ node experiments/crowd-simulation/check-terrain.mjs
 node experiments/crowd-simulation/check-navigation.mjs
 node experiments/crowd-simulation/check-movement.mjs
 node experiments/crowd-simulation/check-arrival.mjs
+node experiments/crowd-simulation/check-occluded.mjs
 node experiments/crowd-simulation/check-smoothing.mjs
 node experiments/crowd-simulation/check-recovery.mjs
 node experiments/crowd-simulation/check-picking.mjs
@@ -90,8 +99,8 @@ node experiments/crowd-simulation/check-browser.mjs
 ```
 
 Der Skalierungscheck prüft tatsächliche Ankünfte bis zweitausend Einheiten samt
-Umleitung und spätem Spawn, Körperabstände, Begehbarkeit, Reservierungen und feste
-geparkte Körper. Der Browsercheck prüft konkrete `file://`-, Shader-, Instancing-,
+zentraler Verteilung hinter Hindernissen, Umleitung und spätem Spawn, Körperabstände,
+Begehbarkeit, Reservierungen und feste geparkte Körper. Der Browsercheck prüft konkrete `file://`-, Shader-, Instancing-,
 Interpolations-, Fuß- und Bedienverträge. Er benötigt das Repository-Paket
 `playwright-core` und ein lokal installiertes Chromium; `CHROMIUM_PATH` überschreibt
 den Standardpfad. Keine Browserdownloads oder gelockerte Datei-Sicherheit.

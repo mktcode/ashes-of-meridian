@@ -1,6 +1,6 @@
 'use strict';
 
-// Rare, shared local routing around resting bodies. Ordinary locomotion stays on the global field.
+// Rare, shared local routing around resting bodies. Static detours use the shared navigation tree.
 const CrowdRecovery = (() => {
   const nav = CrowdNavigation, step = 0.05, radius = 6, side = Math.round(radius * 2 / step) + 1;
   const bodyRadius = nav.radius * 2 + 0.02, states = new WeakMap(), expansionBudget = 8192, cacheLimit = 8;
@@ -62,9 +62,7 @@ const CrowdRecovery = (() => {
       }
       return { index, value };
     }
-    const destinationDistance = Math.hypot(target.x - world.destination.x, target.z - world.destination.z);
-    const potential = p => nav.canTravel(p.x, p.z, target.x, target.z) ? Math.hypot(p.x - target.x, p.z - target.z)
-      : world.field.cost[nav.indexAt(p.x, p.z)] + destinationDistance;
+    const potential = p => nav.travelDistance(world.field, target, p.x, p.z);
     if (goal) {
       const i = Math.round((goal.z - oz) / step) * side + Math.round((goal.x - ox) / step);
       if (!blocked[i]) { cost[i] = 0; push(i, 0); }
@@ -79,6 +77,7 @@ const CrowdRecovery = (() => {
     return { ox, oz, blocked, cost, next, closed, heapIndex, point, nearby, push, pop, goal, potential };
   }
   function plan(world, marine, target = marine.target) {
+    nav.prepareTarget(world.field, target);
     const now = world.time, parked = snapshot(world, marine);
     let state = states.get(world);
     if (!state || state.command !== world.slotPool) {

@@ -9,7 +9,7 @@ const CrowdSimulation = (() => {
   function createMarine(x = 0, z = 0) {
     return { x, y: CrowdTerrain.heightAt(x, z), z, yaw: 0, moving: false, time: 0, runWeight: 0, vx: 0, vz: 0,
       avoidSide: 1, avoidCos: 1, avoidSin: 0, clearFor: 0, target: null, directCell: -1, direct: false, bestDistance: Infinity, stalledFor: 0,
-      route: null, recoverAfter: 0, yieldUntil: 0, bestFieldDistance: Infinity, alternativeCursor: 0,
+      route: null, navigation: null, recoverAfter: 0, yieldUntil: 0, bestFieldDistance: Infinity, alternativeCursor: 0,
       previous: { x, z, yaw: 0, time: 0, runWeight: 0 } };
   }
   function createWorld() {
@@ -22,7 +22,8 @@ const CrowdSimulation = (() => {
   function setTarget(marine, target) {
     marine.target = target; marine.directCell = -1; marine.direct = false;
     marine.bestDistance = Infinity; marine.bestFieldDistance = Infinity; marine.stalledFor = 0;
-    marine.route = null; marine.recoverAfter = 0; marine.yieldUntil = 0; marine.alternativeCursor = 0;
+    marine.route = null; marine.navigation = { points: target.approach, index: -1, bestDistance: Infinity };
+    marine.recoverAfter = 0; marine.yieldUntil = 0; marine.alternativeCursor = 0;
     marine.avoidCos = 1; marine.avoidSin = 0; marine.clearFor = 0;
     marine.moving = Math.hypot(target.x - marine.x, target.z - marine.z) > 0.03;
   }
@@ -56,8 +57,9 @@ const CrowdSimulation = (() => {
         const target = world.slotPool[slotCursor++];
         world.reservedSlots.add(target);
         target.row = arrivalRow(target, world.arrivalDirection, world.arrivalFront);
+        nav.prepareTarget(world.field, target);
         setTarget(marine, target); world.slots.push(target);
-        world.arrivalRadius = Math.max(world.arrivalRadius, Math.hypot(target.x - world.destination.x, target.z - world.destination.z) + 1.5);
+        world.arrivalRadius = Math.max(world.arrivalRadius, target.approach[0].remaining + 1.5);
       }
       world.marines.push(marine); insert(world.marines.length - 1); added.push(marine);
       if (added.length === limit) break;
@@ -90,11 +92,11 @@ const CrowdSimulation = (() => {
     if (!field || world.marines.some(m => !Number.isFinite(field.cost[nav.indexAt(m.x, m.z)]))) return false;
     const direction = arrivalDirection(world.marines, point);
     // Retain the complete candidate order so later spawns do not re-enumerate routes.
-    const slotPool = nav.places(point, nav.walkable.length, field, true, direction);
+    const slotPool = nav.places(point, nav.walkable.length, field, direction);
     const slots = slotPool.slice(0, world.marines.length);
     if (slots.length !== world.marines.length) return false;
     const front = Math.max(depth(point, direction), ...slots.map(slot => depth(slot, direction)));
-    for (const slot of slots) slot.row = arrivalRow(slot, direction, front);
+    for (const slot of slots) { slot.row = arrivalRow(slot, direction, front); nav.prepareTarget(field, slot); }
     // Fill the far side first; match lateral order within each depth band rather than crossing lanes.
     const ordered = world.marines.slice().sort((a, b) => depth(b, direction) - depth(a, direction) || lateral(a, direction) - lateral(b, direction));
     const ranked = slots.slice().sort((a, b) => a.row - b.row || lateral(a, direction) - lateral(b, direction));
@@ -107,7 +109,7 @@ const CrowdSimulation = (() => {
     }
     world.destination = { x: point.x, z: point.z }; world.field = field; world.slots = slots; world.slotPool = slotPool; world.reservedSlots = new Set(slots);
     world.arrivalDirection = direction; world.arrivalFront = front; world.recoveryAfter = 0; world.reassignAfter = 0; world.recoveryCandidate = null; world.recoveryWork = 0;
-    world.arrivalRadius = Math.max(0, ...slots.map(slot => Math.hypot(slot.x - point.x, slot.z - point.z))) + 1.5;
+    world.arrivalRadius = Math.max(0, ...slots.map(slot => slot.approach[0].remaining)) + 1.5;
     world.stats.fieldBuilds++;
     return true;
   }
@@ -168,7 +170,7 @@ const CrowdSimulation = (() => {
           target.row = old.row; world.reservedSlots.delete(old); world.reservedSlots.add(target);
           world.slots[world.slots.indexOf(old)] = target;
           setTarget(candidate, target); world.stats.retargets++;
-          world.arrivalRadius = Math.max(world.arrivalRadius, Math.hypot(target.x - world.destination.x, target.z - world.destination.z) + 1.5);
+          world.arrivalRadius = Math.max(world.arrivalRadius, target.approach[0].remaining + 1.5);
         } else if (result.status === 'pending') candidate.alternativeCursor = i;
         break;
       }
@@ -256,16 +258,23 @@ const CrowdSimulation = (() => {
           marine.route.index++;
         }
         if (marine.route.index === marine.route.points.length) {
-          marine.route = null; marine.bestDistance = Infinity; marine.stalledFor = 0;
+          marine.route = null; marine.directCell = -1; marine.bestDistance = Infinity; marine.stalledFor = 0;
         }
       }
-      const cell = nav.indexAt(marine.x, marine.z);
-      if (cell !== marine.directCell || !marine.direct && cell === world.field.goal) {
-        marine.directCell = cell;
-        marine.direct = Math.hypot(marine.x - world.destination.x, marine.z - world.destination.z) <= world.arrivalRadius
-          && nav.canTravel(marine.x, marine.z, marine.target.x, marine.target.z);
+      const cell = nav.indexAt(marine.x, marine.z), navigation = marine.navigation;
+      const approach = navigation.points[navigation.index];
+      if (!marine.route && (cell !== marine.directCell || !marine.direct && cell === world.field.goal
+        || approach && Math.hypot(approach.x - marine.x, approach.z - marine.z) <= 0.06)) {
+        marine.directCell = cell; marine.direct = false; navigation.index = -1;
+        if (Math.hypot(marine.x - world.destination.x, marine.z - world.destination.z) <= world.arrivalRadius) {
+          marine.direct = nav.canTravel(marine.x, marine.z, marine.target.x, marine.target.z);
+          if (!marine.direct) for (let i = navigation.points.length - 2; i > 0; i--) {
+            const p = navigation.points[i];
+            if (nav.canTravel(marine.x, marine.z, p.x, p.z)) { navigation.index = i; break; }
+          }
+        }
       }
-      const waypoint = marine.route?.points[marine.route.index];
+      const waypoint = marine.route?.points[marine.route.index] || navigation.points[navigation.index];
       const waypointDistance = waypoint ? Math.hypot(waypoint.x - marine.x, waypoint.z - marine.z) : 0;
       if (waypoint) s.remaining[i] = Math.min(distance, waypointDistance);
       const direction = waypoint ? { x: (waypoint.x - marine.x) / waypointDistance, z: (waypoint.z - marine.z) / waypointDistance }
@@ -345,11 +354,12 @@ const CrowdSimulation = (() => {
         }
       }
       marine.moving = distance > 0.03 || !snapClear;
-      const waypoint = marine.route?.points[marine.route.index];
+      const navigation = marine.navigation;
+      const waypoint = marine.route?.points[marine.route.index] || navigation?.points[navigation.index];
       // Distance potential recognises real detours; oscillation without new progress does not reset recovery.
       const progress = waypoint ? Math.hypot(waypoint.x - marine.x, waypoint.z - marine.z) + waypoint.remaining
         : marine.direct ? distance : world.field && marine.target ? world.field.cost[nav.indexAt(marine.x, marine.z)] : distance;
-      const owner = waypoint ? marine.route : marine;
+      const owner = waypoint ? marine.route || navigation : marine;
       const key = !waypoint && !marine.direct ? 'bestFieldDistance' : 'bestDistance';
       if (!marine.moving || progress < (owner[key] ?? Infinity) - 0.05) { owner[key] = progress; marine.stalledFor = 0; }
       else if (marine.yieldUntil <= world.time) marine.stalledFor += dt;
