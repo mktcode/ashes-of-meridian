@@ -43,7 +43,7 @@ for (const [x, z] of [[0, 0], [-4, -3], [5, 4], [4, -1], [-terrain.halfSize, ter
   }
 }
 const camera = {
-  right: [1, 0, 0], up: [0, Math.cos(0.08), -Math.sin(0.08)], eye: [0, Math.sin(0.08), Math.cos(0.08)], scale: [0.05, 0.05],
+  right: [1, 0, 0], up: [0, Math.cos(0.08), -Math.sin(0.08)], eye: [0, Math.sin(0.08), Math.cos(0.08)], scale: [0.05, 0.05], center: [0, 0, 0], depth: terrain.halfSize * 4 + 32,
 };
 const hidden = [5, terrain.heightAt(5, -5), -5];
 const hit = terrain.pick(dot(hidden, camera.right) * camera.scale[0], dot(hidden, camera.up) * camera.scale[1], camera);

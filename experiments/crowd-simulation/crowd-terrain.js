@@ -1,7 +1,7 @@
 'use strict';
 
 const CrowdTerrain = (() => {
-  const halfSize = 32, cellSize = 0.5, cells = halfSize * 2 / cellSize;
+  const halfSize = 64, cellSize = 0.5, cells = halfSize * 2 / cellSize;
   const stride = cells + 1, points = [], normals = [], vertices = [];
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const normalize = v => {
@@ -80,25 +80,58 @@ const CrowdTerrain = (() => {
 
   function pick(ndcX, ndcY, camera) {
     if (!Number.isFinite(ndcX) || !Number.isFinite(ndcY) || Math.abs(camera.eye[1]) < 1e-5) return null;
-    const origin = camera.right.map((value, i) => value * ndcX / camera.scale[0] + camera.up[i] * ndcY / camera.scale[1] + camera.eye[i] * 80);
+    const origin = camera.right.map((value, i) => value * ndcX / camera.scale[0] + camera.up[i] * ndcY / camera.scale[1] + camera.eye[i] * camera.depth + camera.center[i]);
     const direction = camera.eye.map(value => -value);
     let nearest = Infinity;
-    // Only on commands, not per frame. The first ray/triangle hit also handles hidden slopes.
-    for (let i = 0; i < mesh.length; i += 18) {
-      const a = [mesh[i], mesh[i + 1], mesh[i + 2]];
-      const edge1 = [mesh[i + 6] - a[0], mesh[i + 7] - a[1], mesh[i + 8] - a[2]];
-      const edge2 = [mesh[i + 12] - a[0], mesh[i + 13] - a[1], mesh[i + 14] - a[2]];
-      const p = cross(direction, edge2);
-      const determinant = edge1[0] * p[0] + edge1[1] * p[1] + edge1[2] * p[2];
-      if (Math.abs(determinant) < 1e-10) continue;
-      const t = origin.map((value, axis) => value - a[axis]);
-      const u = (t[0] * p[0] + t[1] * p[1] + t[2] * p[2]) / determinant;
-      if (u < -1e-8 || u > 1 + 1e-8) continue;
-      const q = cross(t, edge1);
-      const v = (direction[0] * q[0] + direction[1] * q[1] + direction[2] * q[2]) / determinant;
-      if (v < -1e-8 || u + v > 1 + 1e-8) continue;
-      const distance = (edge2[0] * q[0] + edge2[1] * q[1] + edge2[2] * q[2]) / determinant;
+    function testTriangle(ai, bi, ci) {
+      const a = points[ai], b = points[bi], c = points[ci];
+      const ex = b[0] - a[0], ey = b[1] - a[1], ez = b[2] - a[2];
+      const fx = c[0] - a[0], fy = c[1] - a[1], fz = c[2] - a[2];
+      const px = direction[1] * fz - direction[2] * fy;
+      const py = direction[2] * fx - direction[0] * fz;
+      const pz = direction[0] * fy - direction[1] * fx;
+      const determinant = ex * px + ey * py + ez * pz;
+      if (Math.abs(determinant) < 1e-10) return;
+      const tx = origin[0] - a[0], ty = origin[1] - a[1], tz = origin[2] - a[2];
+      const u = (tx * px + ty * py + tz * pz) / determinant;
+      if (u < -1e-8 || u > 1 + 1e-8) return;
+      const qx = ty * ez - tz * ey, qy = tz * ex - tx * ez, qz = tx * ey - ty * ex;
+      const v = (direction[0] * qx + direction[1] * qy + direction[2] * qz) / determinant;
+      if (v < -1e-8 || u + v > 1 + 1e-8) return;
+      const distance = (fx * qx + fy * qy + fz * qz) / determinant;
       if (distance >= 0 && distance < nearest) nearest = distance;
+    }
+    let entry = 0, exit = Infinity;
+    for (const axis of [0, 2]) {
+      if (Math.abs(direction[axis]) < 1e-12) {
+        if (Math.abs(origin[axis]) > halfSize + 1e-8) return null;
+      } else {
+        const a = (-halfSize - 1e-8 - origin[axis]) / direction[axis];
+        const b = (halfSize + 1e-8 - origin[axis]) / direction[axis];
+        entry = Math.max(entry, Math.min(a, b)); exit = Math.min(exit, Math.max(a, b));
+      }
+    }
+    if (entry > exit) return null;
+    let ix = clamp(Math.floor((origin[0] + direction[0] * entry + halfSize) / cellSize), 0, cells - 1);
+    let iz = clamp(Math.floor((origin[2] + direction[2] * entry + halfSize) / cellSize), 0, cells - 1);
+    const sx = Math.sign(direction[0]), sz = Math.sign(direction[2]);
+    const deltaX = Math.abs(direction[0]) < 1e-12 ? Infinity : cellSize / Math.abs(direction[0]);
+    const deltaZ = Math.abs(direction[2]) < 1e-12 ? Infinity : cellSize / Math.abs(direction[2]);
+    let nextX = deltaX === Infinity ? Infinity : (-halfSize + (ix + (sx > 0 ? 1 : 0)) * cellSize - origin[0]) / direction[0];
+    let nextZ = deltaZ === Infinity ? Infinity : (-halfSize + (iz + (sz > 0 ? 1 : 0)) * cellSize - origin[2]) / direction[2];
+    // Grid traversal bounds the query by ray length. Neighbour cells preserve triangle-edge tolerance.
+    for (let steps = 0; steps <= cells * 2 + 2; steps++) {
+      for (let z = Math.max(0, iz - 1); z <= Math.min(cells - 1, iz + 1); z++) {
+        for (let x = Math.max(0, ix - 1); x <= Math.min(cells - 1, ix + 1); x++) {
+          const a = z * stride + x, b = a + 1, c = a + stride, d = c + 1;
+          testTriangle(a, c, b); testTriangle(b, c, d);
+        }
+      }
+      const next = Math.min(nextX, nextZ);
+      if (nearest <= next + 1e-8 || next > exit || !Number.isFinite(next)) break;
+      if (nextX <= next + 1e-10) { ix += sx; nextX += deltaX; }
+      if (nextZ <= next + 1e-10) { iz += sz; nextZ += deltaZ; }
+      if (ix < 0 || iz < 0 || ix >= cells || iz >= cells) break;
     }
     if (!Number.isFinite(nearest)) return null;
     const x = clamp(origin[0] + direction[0] * nearest, -halfSize, halfSize);

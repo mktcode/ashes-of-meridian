@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const context = vm.createContext({});
-for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
+for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-recovery.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
 const { core, terrain, nav } = vm.runInContext('({ core: CrowdSimulation, terrain: CrowdTerrain, nav: CrowdNavigation })', context);
 const angle = a => Math.abs(Math.atan2(Math.sin(a), Math.cos(a)));
 const world = core.createWorld();

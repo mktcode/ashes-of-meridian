@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const context = vm.createContext({});
-for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
+for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-recovery.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
 const { core, nav, terrain } = vm.runInContext('({ core: CrowdSimulation, nav: CrowdNavigation, terrain: CrowdTerrain })', context);
 const projection = (p, axis) => p.x * axis.x + p.z * axis.z;
 function valid(world) {
@@ -92,7 +92,7 @@ putAt(recovery.marines[0], targets[1]); putAt(recovery.marines[1], targets[0]);
 core.update(recovery, 1 / 60);
 assert.equal(recovery.marines[0].target, targets[0]);
 assert.equal(recovery.marines[1].target, targets[1]);
-assert.equal(recovery.marines[0].stalledFor, 0, 'recovery was actually invoked');
+assert.ok(recovery.stats.recoveryAttempts > 0, 'recovery was actually invoked');
 arrive(recovery);
 
 // Recovery remains available for genuinely crossed lateral lanes in the same row.

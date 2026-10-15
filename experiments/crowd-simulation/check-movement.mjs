@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const context = vm.createContext({});
-for (const name of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(name, import.meta.url), 'utf8'), context);
+for (const name of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-recovery.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(name, import.meta.url), 'utf8'), context);
 const { core, nav, terrain } = vm.runInContext('({ core: CrowdSimulation, nav: CrowdNavigation, terrain: CrowdTerrain })', context);
 function advance(world, seconds) {
   for (let i = 0; i < Math.ceil(seconds * 60); i++) core.update(world, 1 / 60);
@@ -94,9 +94,9 @@ advance(overlap, 0.25);
 assert.ok(Math.hypot(overlap.marines[0].x - overlap.marines[1].x, overlap.marines[0].z - overlap.marines[1].z) >= nav.radius * 2 - 1e-4, 'coincident bodies have a deterministic escape direction');
 valid(overlap);
 const distant = core.createWorld();
-assert.ok(core.moveTo(distant, { x: 24, z: -23 }), 'new map area is reachable');
-arrive(distant, 60);
-assert.equal(distant.marines[0].x, 24); assert.equal(distant.marines[0].z, -23);
+assert.ok(core.moveTo(distant, { x: 48, z: -46 }), 'new map area is reachable');
+arrive(distant, 90);
+assert.equal(distant.marines[0].x, 48); assert.equal(distant.marines[0].z, -46);
 const converging = core.createWorld();
 converging.marines = Array.from({ length: 16 }, (_, i) => core.createMarine(10 * Math.cos(i * Math.PI / 8), 10 * Math.sin(i * Math.PI / 8)));
 valid(converging);

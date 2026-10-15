@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const context = vm.createContext({});
-for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-core.js']) vm.runInContext(readFileSync(new URL(file, import.meta.url), 'utf8'), context);
-const { nav, terrain, core } = vm.runInContext('({ nav: CrowdNavigation, terrain: CrowdTerrain, core: CrowdSimulation })', context);
-assert.equal(nav.halfSize, 32);
-assert.equal(nav.cells, 128);
+// Exercise the classic scripts with native intrinsics, as in the browser; sandbox global proxies distort large-grid cost.
+for (const file of ['crowd-terrain.js', 'crowd-navigation.js', 'crowd-recovery.js', 'crowd-core.js']) vm.runInThisContext(readFileSync(new URL(file, import.meta.url), 'utf8'));
+const { nav, terrain, core } = vm.runInThisContext('({ nav: CrowdNavigation, terrain: CrowdTerrain, core: CrowdSimulation })');
+assert.equal(nav.halfSize, 64);
+assert.equal(nav.cells, 256);
 assert.equal(nav.obstacles.length, 9);
 assert.ok(nav.canStand(0, 0));
 const rim = nav.halfSize - 1;
