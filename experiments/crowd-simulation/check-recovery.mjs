@@ -94,6 +94,17 @@ for (let tick = 0; tick < 3; tick++) core.update(cornerWorld, 1 / 60);
 assert.equal(cornerMover.route.index, 0, 'the corner stays active until its successor is actually visible');
 arrive(cornerWorld, 20); assert.equal(cornerWorld.stats.fieldBuilds, 1);
 
+// A local route's last point can itself be the corner needed to see the individual reservation.
+const exitWorld = core.createWorld(); exitWorld.marines = [core.createMarine(9.45, 13.95)];
+assert.ok(core.moveTo(exitWorld, { x: 20, z: -6 }));
+const exitGroup = exitWorld.groups[0], exitMover = exitWorld.marines[0], exitTarget = { x: 21.3834344874336, z: 23.255744889149195, row: 0 };
+nav.prepareTarget(exitGroup.field, exitTarget); exitGroup.reservedSlots = new Set([exitTarget]); exitGroup.slotPool = [exitTarget];
+exitGroup.arrivalRadius = exitTarget.approach[0].remaining + 1.5;
+Object.assign(exitMover, { target: exitTarget, runWeight: 1, navigation: { points: exitTarget.approach, index: -1, bestDistance: Infinity },
+  route: { index: 0, points: [{ x: 9.45, z: 14, remaining: 0 }] } });
+core.update(exitWorld, 1 / 60); assert.ok(exitMover.z > 13.95, 'finish the exit instead of turning back toward the shared root');
+arrive(exitWorld, 20); assert.equal(exitWorld.stats.fieldBuilds, 1);
+
 // A permanently failed unit cannot monopolise the shared scheduler or keep probing while queued.
 const queue = core.createWorld(); core.spawnMarines(queue, 2); core.moveTo(queue, { x: -8, z: 8 });
 const queueGroup = queue.groups[0], queueField = queueGroup.field, seen = [], planner = recovery.plan;

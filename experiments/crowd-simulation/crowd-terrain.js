@@ -138,5 +138,5 @@ const CrowdTerrain = (() => {
     const z = clamp(origin[2] + direction[2] * nearest, -halfSize, halfSize);
     return { x, y: heightAt(x, z), z };
   }
-  return { halfSize, vertices: mesh, heightAt, slopeAt, sample, transform, pick };
+  return { halfSize, cellSize, vertices: mesh, heightAt, slopeAt, sample, transform, pick };
 })();

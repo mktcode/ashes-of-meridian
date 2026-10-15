@@ -2,7 +2,7 @@
 
 const CrowdNavigation = (() => {
   const halfSize = CrowdTerrain.halfSize, cellSize = 0.5, cells = halfSize * 2 / cellSize;
-  const radius = 0.4, maxSlope = 0.6, parkingSpacing = radius * 4 + 0.15;
+  const maxSlope = 0.6, radii = { marine: 0.4, tank: 1.4 }, classes = new Map();
   const obstacles = [
     { x: 2.5, z: 0, width: 2, depth: 6, height: 3 },
     { x: -16, z: -12, width: 7, depth: 3, height: 2.8 },
@@ -15,8 +15,7 @@ const CrowdNavigation = (() => {
     { x: -24, z: -2, width: 3, depth: 6, height: 2.8 },
   ];
   for (const box of obstacles) box.baseY = Math.min(...[-1, 1].flatMap(sx => [-1, 1].map(sz => CrowdTerrain.heightAt(box.x + sx * box.width / 2, box.z + sz * box.depth / 2)))) - 0.1;
-  const count = cells * cells, walkable = new Uint8Array(count), steep = new Uint8Array(count);
-  const neighbours = new Int32Array(count * 8).fill(-1);
+  const count = cells * cells, steep = new Uint8Array(count);
   const offsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
   function indexAt(x, z) {
     if (!Number.isFinite(x) || !Number.isFinite(z) || x < -halfSize || z < -halfSize || x >= halfSize || z >= halfSize) return -1;
@@ -29,11 +28,14 @@ const CrowdNavigation = (() => {
     const { x, z } = pointAt(i);
     steep[i] = Math.max(CrowdTerrain.slopeAt(x - 0.125, z - 0.125), CrowdTerrain.slopeAt(x + 0.125, z + 0.125)) > maxSlope ? 1 : 0;
   }
+  function create(radius) {
+  const parkingSpacing = radius * 4 + 0.15, clearance = Math.ceil(radius / cellSize);
+  const walkable = new Uint8Array(count), neighbours = new Int32Array(count * 8).fill(-1);
   // Conservative footprint clearance: whole navigation cells stay clear of blocked triangles/boxes.
-  for (let iz = 1; iz < cells - 1; iz++) for (let ix = 1; ix < cells - 1; ix++) {
+  for (let iz = clearance; iz < cells - clearance; iz++) for (let ix = clearance; ix < cells - clearance; ix++) {
     const i = iz * cells + ix, { x, z } = pointAt(i);
     let blocked = false;
-    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) blocked ||= Boolean(steep[(iz + dz) * cells + ix + dx]);
+    for (let dz = -clearance; dz <= clearance; dz++) for (let dx = -clearance; dx <= clearance; dx++) blocked ||= Boolean(steep[(iz + dz) * cells + ix + dx]);
     for (const box of obstacles) blocked ||= Math.abs(x - box.x) <= box.width / 2 + radius + cellSize / 2
       && Math.abs(z - box.z) <= box.depth / 2 + radius + cellSize / 2;
     walkable[i] = blocked ? 0 : 1;
@@ -166,16 +168,17 @@ const CrowdNavigation = (() => {
     }
     return distance;
   }
-  function places(point, limit, field = null, direction = null) {
-    // Leave passing lanes between parked bodies instead of sealing off inner slots.
-    const candidates = [], spacing = parkingSpacing, rings = Math.ceil(halfSize * 4 / spacing);
+  function places(point, limit, field = null, direction = null, passage = null) {
+    // Both body-to-body lanes and wall clearance must fit the largest participating class.
+    const passageRadius = passage?.radius || radius, canPass = passage?.canStand || canStand;
+    const candidates = [], spacing = radius * 2 + Math.max(radius, passageRadius) * 2 + 0.15, rings = Math.ceil(halfSize * 4 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
       const dx = spacing * (q + r / 2), dz = spacing * Math.sqrt(3) / 2 * r;
       const x = point.x + (direction ? direction.x * dx - direction.z * dz : dx);
       const z = point.z + (direction ? direction.z * dx + direction.x * dz : dz);
       if (!canStand(x, z) || field && !Number.isFinite(field.cost[indexAt(x, z)])) continue;
       // Park away from walls/cliffs so a resting marine cannot seal the last passing lane.
-      if (offsets.some(([dx, dz]) => !canStand(x + dx * (radius * 2 + 0.05), z + dz * (radius * 2 + 0.05)))) continue;
+      if (offsets.some(([dx, dz]) => !canPass(x + dx * (radius + passageRadius + 0.05), z + dz * (radius + passageRadius + 0.05)))) continue;
       const center = field ? pointAt(indexAt(x, z)) : null, end = field ? pointAt(field.goal) : null;
       // Direct paths keep exact symmetric distances; hidden slots use the shared walking distance.
       const distance = field && !canTravel(point.x, point.z, x, z)
@@ -196,4 +199,11 @@ const CrowdNavigation = (() => {
   }
   const spawnSites = places({ x: 0, z: 0 }, count);
   return { halfSize, cellSize, cells, radius, maxSlope, parkingSpacing, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
+  }
+  function forKind(kind) {
+    if (typeof kind !== 'string' || !Object.hasOwn(radii, kind)) return null;
+    if (!classes.has(kind)) classes.set(kind, create(radii[kind]));
+    return classes.get(kind);
+  }
+  return { ...forKind('marine'), forKind };
 })();

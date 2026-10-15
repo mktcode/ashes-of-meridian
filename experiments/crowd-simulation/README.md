@@ -1,4 +1,4 @@
-# Crowd Simulation · Marines
+# Crowd Simulation · Marines & Panzer
 
 `index.html` direkt im Browser öffnen (WebGL 2). Kein Build, Server, CDN oder
 Laufzeit-Import nötig. Eigenständiges Experiment ohne Anbindung an das Spiel.
@@ -12,8 +12,11 @@ Teilmenge erhalten. Neue Marines übernehmen nur den Befehl ihrer Gruppe. Spawne
 Befehle funktionieren auch während der Pause; sie lassen die Simulationszeit nicht laufen.
 
 Die Szenen für Gegenverkehr im Felsengpass, kreuzende Wege, eine stehende Gruppe und
-frontalen Gegnerkontakt setzen beide Gruppen neu auf. Die Anzahl gilt je Gruppe.
-Die Gegner-Checkbox ändert die Beziehung, nicht die Gruppenfarben oder Laufziele.
+frontalen Gegnerkontakt setzen beide Gruppen neu auf. Die Größe gilt dort je Marine-Gruppe.
+Die gemischten Szenen erzeugen A mit dieser Anzahl Marines und B mit einem Panzer je acht
+Marines, aufgerundet. Jede Gruppe hat zunächst genau einen Einheitentyp; ihre Spawnbuttons
+übernehmen diesen Typ. So lassen sich beide Größen unabhängig befehligen, auch zum selben
+Zielbereich. Die Gegner-Checkbox ändert die Beziehung, nicht die Gruppenfarben oder Laufziele.
 
 Ziehen dreht / neigt die Kamera, das Mausrad zoomt. Mitteltaste oder
 Umschalt + Ziehen verschiebt die Karte. „Crowd zentrieren“ passt Ausschnitt und Zoom
@@ -29,8 +32,10 @@ bleiben trotz größerer Karte gleich. Navigation prüft die tatsächlichen Gel�
 und Körperfreiheit, nicht die geglätteten Beleuchtungsnormalen. Gesperrte oder nicht
 erreichbare Ziele ändern den alten Befehl nicht.
 
-Das statische Raster entsteht einmal. Dijkstra berechnet das Feld bei einem neuen
-Gruppenziel, nicht pro Marine oder Frame; andere Gruppenfelder bleiben unverändert.
+Das statische Freiraumraster entsteht einmal je Größenklasse auf derselben Geländeauflösung.
+Der größere Panzerkörper erhält echte zusätzliche Hindernis- und Hangfreiheit, nicht nur
+ein größeres Bild. Dijkstra berechnet das Feld bei einem neuen Gruppenziel, nicht pro
+Einheit oder Frame; andere Gruppenfelder bleiben unverändert.
 Räumliche Nachbarsuche, lokale
 Geschwindigkeitsproben und gleichzeitige Bewegung vermeiden globale Paarvergleiche.
 Am Ziel erhält jeder einen eigenen Standplatz mit Durchgängen. Die Fläche wächst nach
@@ -38,7 +43,10 @@ begehbarer Wegdistanz, auch hinter Hindernissen, statt auf freie Geraden zum Kli
 beschränkt zu bleiben. Vordere Marines füllen die gegenüberliegende Seite, Nachzügler
 die Ankunftsseite; seitliche Reihenfolge bleibt möglichst erhalten. Bereits geparkte
 Marines und ihre Reservierungen bleiben fest. Auch verschiedene Gruppen dürfen keine
-überlappenden Standplätze reservieren; die Abstände für Durchgänge bleiben erhalten.
+überlappenden Standplätze reservieren. Neue Formationen berücksichtigen die größte bereits
+vorhandene Körperklasse: sowohl die Gassen zwischen Standplätzen als auch der Abstand zu
+Wänden müssen für diese Klasse ausreichen. Ein später hinzugefügter Panzer verschiebt keine
+bereits geparkten Marines; alte enge Formationen werden nicht automatisch umgebaut.
 Spawns und spätere Wiederaufnahmen prüfen die inzwischen belegten Plätze erneut.
 
 Die Anfahrt zum eigenen Standplatz nutzt bei Bedarf umgekehrte Zweige desselben
@@ -50,7 +58,10 @@ auch dann, wenn der nötige Weg vom gemeinsamen Klickpunkt wegführt.
 Recovery erkennt fehlenden Fortschritt auch bei Bewegung im Kreis. Legitime Umwege
 zählen als Fortschritt; erfolglose Rettungsversuche löschen den Stillstand nicht.
 Seltene, budgetierte lokale Suchfelder berücksichtigen geparkte beziehungsweise
-kurz wartende Körper. Ihr feines Raster erhält enge reale Durchgänge. Unfertige
+kurz wartende Körper mit der Summe beider Körperradien. Bei großen Körpern zählen auch
+festgefahrene, nahezu stillstehende Nachbarn als Hindernisse. Sie dürfen unabhängig Umwege
+suchen, statt durch wiederholtes priorisiertes Warten eine ganze Panzerkolonne zu sperren.
+Das feine Raster erhält enge reale Durchgänge. Unfertige
 Suchen werden fortgesetzt, statt durch entfernte Ankünfte ständig neu anzufangen.
 Der Cache hält höchstens acht Felder je Gruppe; das Suchbudget und die Aufrufrate
 bleiben gemeinsam für die Welt begrenzt. Die Route führt zum tatsächlichen
@@ -77,7 +88,8 @@ Ein Haltbefehl verwirft den Gruppenlaufbefehl und gibt seine Reservierungen frei
 Die Marines halten ihre tatsächlichen Positionen und bleiben körperliche Hindernisse,
 auch ohne Zielreservierung. Bewegte Einheiten weichen aus, statt sie wegzuschieben.
 
-Feindliche Marines reagieren nur auf nahe, direkt erreichbare Gegner. Die Suche bleibt
+Feindliche Einheiten reagieren nur auf nahe, direkt erreichbare Gegner. Der Kontaktabstand
+berücksichtigt beide Körperradien; Panzer drücken nicht bis auf Marine-Abstand zusammen. Die Suche bleibt
 räumlich lokal und liest einen gemeinsamen Tick-Snapshot. Kontakt stoppt die Bewegung,
 dreht den Marine zum Gegner und blendet zu Idle; er gilt **nicht** als Ankunft am Laufziel.
 Die frühere Standplatzreservierung wird freigegeben. Eine größere Freigabedistanz als
@@ -91,8 +103,20 @@ fortsetzen. Bereits angekommene Marines werden dabei nicht umgestellt. Falls kei
 verfügbar ist, warten Nachzügler, statt eine Ankunft vorzutäuschen.
 
 Gruppenauftrag, individueller Bewegungszustand und Animationspose sind getrennt.
-Es gibt noch keine Verfolgung, Waffen, Schaden, taktisches Flankieren oder Fahrzeugphysik.
+Es gibt noch keine Verfolgung, Beschuss, Schaden, taktisches Flankieren oder Fahrzeugphysik.
 Die Demonstration ist keine Kampfabnahme.
+
+## Vereinfachter Panzer
+
+Ein eigenes prozedurales Boxmodell zeigt Wanne, Kettenblöcke, Turm und Rohr. Das gesamte
+starre Modell einschließlich Rohr passt bei jeder horizontalen Drehung in seinen runden
+Kollisionskörper. Es ist kein vergrößerter Marine; dessen Körpermaße und Fuß-IK bleiben gleich.
+
+Der Platzhalter bewegt sich noch nach dem einfachen Crowd-Modell. Es gibt weder Wendekreis,
+Trägheit, unabhängiges Turmzielen noch animierte Ketten. Seine Unterseite bleibt starr und
+aufrecht. Ein konservativer Geländeabstand über vollständige Geländedreiecke verhindert
+Einsinken; auf Hängen kann das Modell deshalb schweben. Das ist keine Federung oder
+Abnahme realistischer Ketten-Bodenkontakte.
 
 ## Darstellung
 
@@ -133,6 +157,8 @@ node experiments/crowd-simulation/check-picking.mjs
 node experiments/crowd-simulation/check-instances.mjs
 node experiments/crowd-simulation/check-scale.mjs
 node experiments/crowd-simulation/check-contact.mjs
+node experiments/crowd-simulation/check-tank.mjs
+node experiments/crowd-simulation/check-tank.mjs --scale
 node experiments/crowd-simulation/check-browser.mjs
 ```
 
@@ -142,8 +168,11 @@ Begehbarkeit, Reservierungen und feste geparkte Körper. Der Gruppencheck prüft
 Ankünfte im Gegenverkehr bis tausend Marines, Kreuzungen, feste Haltpositionen, getrennte
 Befehle, gemeinsame Zielbereiche, späte Spawns, Kontakt und Rückzug. Sein kurzer
 Tausend-Marines-Kontaktlauf ist ausdrücklich ein Messfenster, kein Ankunftstest.
+Der Panzercheck prüft größere Freiräume, gemischte Körperabstände, Wand- und Parkgassen,
+Umwege beider Größen, späte Panzer-Spawns, gemeinsame Zielbereiche, Gegnerkontakt und
+Wiederaufnahme. `--scale` ergänzt vollständige Ankünfte von 500 Marines und 63 Panzern.
 Der Browsercheck prüft konkrete `file://`-, Shader-, Instancing-, Paletten-,
-Interpolations-, Fuß- und Gruppen-Bedienverträge. Er benötigt das Repository-Paket
+Interpolations-, Fuß- und Gruppen-Bedienverträge sowie tatsächlich hochgeladene Panzer-Matrizen. Er benötigt das Repository-Paket
 `playwright-core` und ein lokal installiertes Chromium; `CHROMIUM_PATH` überschreibt
 den Standardpfad. Keine Browserdownloads oder gelockerte Datei-Sicherheit.
 

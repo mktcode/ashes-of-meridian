@@ -17,12 +17,12 @@ const MarineInstances = (() => {
     pivotDistance[i] = (parents[i] < 0 ? 0 : pivotDistance[parents[i]]) + Math.hypot(...p.pivot);
     radius = Math.max(radius, pivotDistance[i] + Math.hypot(...p.center) + Math.hypot(...p.size) / 2 + 1);
   }
-  function visible(marine, camera) {
+  function visible(marine, camera, boundsRadius = radius) {
     const x = marine.x - camera.center[0], y = marine.y - camera.center[1], z = marine.z - camera.center[2];
     const dot = axis => x * axis[0] + y * axis[1] + z * axis[2];
-    return Math.abs(dot(camera.right)) * camera.scale[0] <= 1 + radius * camera.scale[0]
-      && Math.abs(dot(camera.up)) * camera.scale[1] <= 1 + radius * camera.scale[1]
-      && Math.abs(dot(camera.eye)) <= camera.depth + radius;
+    return Math.abs(dot(camera.right)) * camera.scale[0] <= 1 + boundsRadius * camera.scale[0]
+      && Math.abs(dot(camera.up)) * camera.scale[1] <= 1 + boundsRadius * camera.scale[1]
+      && Math.abs(dot(camera.eye)) <= camera.depth + boundsRadius;
   }
   function identity(out) {
     out.fill(0); out[0] = out[5] = out[10] = out[15] = 1;
@@ -61,6 +61,11 @@ const MarineInstances = (() => {
         for (let row = 0; row < 3; row++) out[offset + 12 + row] = transform[row] * center[0] + transform[4 + row] * center[1] + transform[8 + row] * center[2] + transform[12 + row];
         out[offset + 15] = 1;
         out.set(color, offset + 16);
+      },
+      tank(unit, armorColor = null) {
+        const transform = TankModel.sampleRoot(unit);
+        for (const part of TankModel.parts) this.box(transform, part.center, part.size,
+          armorColor && part.color === TankModel.armor ? armorColor : part.color);
       },
       marine(marine, pose = null, armorColor = null) {
         const c = Math.cos(marine.yaw), s = Math.sin(marine.yaw);

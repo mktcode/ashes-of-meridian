@@ -8,16 +8,21 @@ const CrowdSimulation = (() => {
   const turns = [0, ...Array.from({ length: 11 }, (_, i) => [i + 1, -i - 1]).flat(), 12]
     .map(n => [Math.cos(n * Math.PI / 12), Math.sin(n * Math.PI / 12)]);
   function createMarine(x = 0, z = 0, group = 0) {
-    return { x, y: CrowdTerrain.heightAt(x, z), z, group, state: 'idle', contact: null, disengage: false,
+    return { x, y: CrowdTerrain.heightAt(x, z), z, group, kind: 'marine', radius: nav.radius, state: 'idle', contact: null, disengage: false,
       yaw: 0, moving: false, time: 0, runWeight: 0, vx: 0, vz: 0,
       avoidSide: 1, avoidCos: 1, avoidSin: 0, clearFor: 0, target: null, directCell: -1, direct: false, bestDistance: Infinity, stalledFor: 0,
       route: null, navigation: null, waitingForRoute: false, recoverAfter: 0, yieldUntil: 0, bestFieldDistance: Infinity, alternativeCursor: 0,
       previous: { x, z, yaw: 0, time: 0, runWeight: 0 } };
   }
-  function createGroup(world, team = 0, spawn = { x: 0, z: 0 }) {
-    if (!Number.isSafeInteger(team) || team < 0 || !spawn || !nav.canStand(spawn.x, spawn.z)) return -1;
+  function createTank(x = 0, z = 0, group = 0) {
+    return { ...createMarine(x, z, group), kind: 'tank', radius: nav.forKind('tank').radius };
+  }
+  const navigationFor = group => CrowdNavigation.forKind(group.kind);
+  function createGroup(world, team = 0, spawn = { x: 0, z: 0 }, kind = 'marine') {
+    const nav = CrowdNavigation.forKind(kind);
+    if (!nav || !Number.isSafeInteger(team) || team < 0 || !spawn || !nav.canStand(spawn.x, spawn.z)) return -1;
     const id = world.groups.length;
-    world.groups.push({ id, team, spawn: { x: spawn.x, z: spawn.z }, spawnSites: null, order: 'idle',
+    world.groups.push({ id, team, kind, spawn: { x: spawn.x, z: spawn.z }, spawnSites: null, order: 'idle',
       destination: null, field: null, slotPool: [], reservedSlots: new Set(),
       arrivalRadius: 0, arrivalDirection: null, arrivalFront: 0, reassignAfter: 0 });
     return id;
@@ -48,20 +53,23 @@ const CrowdSimulation = (() => {
   const bucket = value => Math.max(0, Math.min(bucketCount - 1, Math.floor((value + halfSize) / bucketSize)));
   function availableSlots(world, group, pool, count, used = group.reservedSlots, commanded = new Set()) {
     if (count <= 0) return [];
-    const blockers = new Map();
+    const blockers = new Map(), ownRadius = navigationFor(group).radius;
+    const passageRadius = Math.max(ownRadius, ...world.marines.map(m => m.radius));
+    let reach = 0;
     for (const m of world.marines) {
       const p = m.group !== group.id ? m.target || (!m.moving ? m : null) : !m.target && !commanded.has(m) ? m : null;
       if (!p) continue;
       const key = bucket(p.z) * bucketCount + bucket(p.x);
       if (!blockers.has(key)) blockers.set(key, []);
-      blockers.get(key).push({ point: p, clearance: m.target ? nav.parkingSpacing : diameter + 0.05 });
+      const clearance = m.target ? ownRadius + m.radius + passageRadius * 2 + 0.15 : ownRadius + m.radius + 0.05;
+      reach = Math.max(reach, clearance); blockers.get(key).push({ point: p, clearance });
     }
     const slots = [];
     for (const p of pool) {
       if (used.has(p)) continue;
       let clear = true;
-      for (let z = bucket(p.z - nav.parkingSpacing); z <= bucket(p.z + nav.parkingSpacing) && clear; z++) {
-        for (let x = bucket(p.x - nav.parkingSpacing); x <= bucket(p.x + nav.parkingSpacing) && clear; x++) {
+      for (let z = bucket(p.z - reach); z <= bucket(p.z + reach) && clear; z++) {
+        for (let x = bucket(p.x - reach); x <= bucket(p.x + reach) && clear; x++) {
           for (const b of blockers.get(z * bucketCount + x) || []) {
             if (Math.hypot(p.x - b.point.x, p.z - b.point.z) < b.clearance - 1e-8) { clear = false; break; }
           }
@@ -72,13 +80,16 @@ const CrowdSimulation = (() => {
     return slots;
   }
   function reserve(group, marine, target) {
-    target.row = arrivalRow(target, group.arrivalDirection, group.arrivalFront);
+    const nav = navigationFor(group);
+    target.row = arrivalRow(target, group.arrivalDirection, group.arrivalFront, nav.radius * 2);
     nav.prepareTarget(group.field, target); group.reservedSlots.add(target); setTarget(marine, target);
     group.arrivalRadius = Math.max(group.arrivalRadius, target.approach[0].remaining + 1.5);
   }
   function spawnMarines(world, count, groupId = 0) {
     const group = Number.isSafeInteger(groupId) ? world.groups[groupId] : null;
     if (!group || !Number.isSafeInteger(count) || count <= 0) return [];
+    const nav = navigationFor(group);
+    let largest = nav.radius;
     const limit = Math.min(count, nav.spawnSites.length, group.field ? group.slotPool.length - group.reservedSlots.size : Infinity);
     if (limit <= 0) return [];
     const targets = group.field ? availableSlots(world, group, group.slotPool, limit) : [];
@@ -87,6 +98,7 @@ const CrowdSimulation = (() => {
     const added = [], heads = new Int32Array(bucketCount ** 2).fill(-1), links = new Int32Array(world.marines.length + capacity);
     const insert = i => {
       const m = world.marines[i], key = bucket(m.z) * bucketCount + bucket(m.x);
+      largest = Math.max(largest, m.radius);
       links[i] = heads[key]; heads[key] = i;
     };
     for (let i = 0; i < world.marines.length; i++) insert(i);
@@ -95,18 +107,18 @@ const CrowdSimulation = (() => {
         - (b.x - group.spawn.x) ** 2 - (b.z - group.spawn.z) ** 2 || a.z - b.z || a.x - b.x));
     // A batch scans the unchanged site order once; new bodies cannot free earlier sites.
     for (const point of sites) {
-      const bx = bucket(point.x), bz = bucket(point.z);
+      const bx = bucket(point.x), bz = bucket(point.z), range = Math.ceil((nav.radius + largest + 0.03) / bucketSize);
       let occupied = false;
-      for (let z = Math.max(0, bz - 1); z <= Math.min(bucketCount - 1, bz + 1) && !occupied; z++) {
-        for (let x = Math.max(0, bx - 1); x <= Math.min(bucketCount - 1, bx + 1) && !occupied; x++) {
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range) && !occupied; z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range) && !occupied; x++) {
           for (let i = heads[z * bucketCount + x]; i >= 0; i = links[i]) {
             const m = world.marines[i];
-            if (Math.hypot(m.x - point.x, m.z - point.z) < diameter + 0.03) { occupied = true; break; }
+            if (Math.hypot(m.x - point.x, m.z - point.z) < nav.radius + m.radius + 0.03) { occupied = true; break; }
           }
         }
       }
       if (occupied) continue;
-      const marine = createMarine(point.x, point.z, groupId);
+      const marine = group.kind === 'tank' ? createTank(point.x, point.z, groupId) : createMarine(point.x, point.z, groupId);
       if (group.field) reserve(group, marine, targets[added.length]);
       else if (group.order === 'hold') marine.state = 'holding';
       world.marines.push(marine); insert(world.marines.length - 1); added.push(marine);
@@ -118,7 +130,7 @@ const CrowdSimulation = (() => {
   const spawnMarine = (world, groupId = 0) => spawnMarines(world, 1, groupId)[0] || null;
   const depth = (point, direction) => point.x * direction.x + point.z * direction.z;
   const lateral = (point, direction) => point.z * direction.x - point.x * direction.z;
-  const arrivalRow = (point, direction, front) => Math.floor((front - depth(point, direction)) / (diameter + 0.05) + 1e-8);
+  const arrivalRow = (point, direction, front, bodyDiameter = diameter) => Math.floor((front - depth(point, direction)) / (bodyDiameter + 0.05) + 1e-8);
   function arrivalDirection(marines, point) {
     let x = 0, z = 0;
     for (const marine of marines) { x += point.x - marine.x; z += point.z - marine.z; }
@@ -135,7 +147,9 @@ const CrowdSimulation = (() => {
   }
   function moveTo(world, point, groupId = 0) {
     const group = Number.isSafeInteger(groupId) ? world.groups[groupId] : null;
-    if (!group || !point || !nav.canStand(point.x, point.z)) return false;
+    if (!group || !point) return false;
+    const nav = navigationFor(group);
+    if (!nav.canStand(point.x, point.z)) return false;
     const members = world.marines.filter(m => m.group === groupId);
     const same = group.destination && point.x === group.destination.x && point.z === group.destination.z;
     if (same && members.every(m => m.target)) {
@@ -150,12 +164,14 @@ const CrowdSimulation = (() => {
     const field = same ? group.field : nav.buildField(point);
     if (!field || members.some(m => !Number.isFinite(field.cost[nav.indexAt(m.x, m.z)]))) return false;
     const direction = same ? group.arrivalDirection : arrivalDirection(members, point);
-    const slotPool = same ? group.slotPool : nav.places(point, nav.walkable.length, field, direction);
+    const passageRadius = Math.max(nav.radius, ...world.marines.map(m => m.radius));
+    const passage = passageRadius > nav.radius ? CrowdNavigation.forKind('tank') : nav;
+    const slotPool = same ? group.slotPool : nav.places(point, nav.walkable.length, field, direction, passage);
     const pending = same ? members.filter(m => !m.target) : members;
     const slots = availableSlots(world, group, slotPool, pending.length, same ? group.reservedSlots : new Set(), new Set(members));
     if (slots.length !== pending.length) return false;
     const front = same ? group.arrivalFront : Math.max(depth(point, direction), ...slots.map(slot => depth(slot, direction)));
-    for (const slot of slots) { slot.row = arrivalRow(slot, direction, front); nav.prepareTarget(field, slot); }
+    for (const slot of slots) { slot.row = arrivalRow(slot, direction, front, nav.radius * 2); nav.prepareTarget(field, slot); }
     const ordered = pending.slice().sort((a, b) => depth(b, direction) - depth(a, direction) || lateral(a, direction) - lateral(b, direction));
     const ranked = slots.slice().sort((a, b) => a.row - b.row || lateral(a, direction) - lateral(b, direction));
     for (let start = 0; start < ranked.length;) {
@@ -211,6 +227,7 @@ const CrowdSimulation = (() => {
     }
   }
   function reassignPending(world, group) {
+    const nav = navigationFor(group);
     const rows = new Map();
     for (const m of world.marines) if (m.group === group.id && m.moving && m.direct && !m.route) {
       if (!rows.has(m.target.row)) rows.set(m.target.row, []);
@@ -247,7 +264,9 @@ const CrowdSimulation = (() => {
     candidate.recoverAfter = world.time + 0.5;
     if (!continuing) for (let i = 0; i < world.marines.length; i++) {
       const other = world.marines[i];
-      if (other === candidate || !other.moving || other.stalledFor < 1 || Math.hypot(other.x - candidate.x, other.z - candidate.z) > diameter * 1.5) continue;
+      if (other === candidate || !other.moving || other.stalledFor < 1 || Math.hypot(other.x - candidate.x, other.z - candidate.z) > (other.radius + candidate.radius) * 1.5) continue;
+      // Large-body queues need independent detours; repeatedly freezing the next tank can lock a whole column.
+      if (candidate.kind === 'tank' || other.kind === 'tank') continue;
       const priority = candidate.group === other.group ? candidate.target.row - other.target.row || index - i : candidate.group - other.group;
       if (priority > 0) { candidate.yieldUntil = world.time + 0.8; return; }
       other.yieldUntil = world.time + 0.8;
@@ -258,7 +277,7 @@ const CrowdSimulation = (() => {
     if (result.status === 'blocked') {
       for (let i = candidate.alternativeCursor; i < group.slotPool.length; i++) {
         const target = group.slotPool[i]; candidate.alternativeCursor = i + 1;
-        if (group.reservedSlots.has(target) || arrivalRow(target, group.arrivalDirection, group.arrivalFront) !== candidate.target.row) continue;
+        if (group.reservedSlots.has(target) || arrivalRow(target, group.arrivalDirection, group.arrivalFront, candidate.radius * 2) !== candidate.target.row) continue;
         if (!availableSlots(world, group, [target], 1).length) continue;
         result = CrowdRecovery.plan(world, candidate, target);
         if (result.status === 'ready') {
@@ -296,9 +315,9 @@ const CrowdSimulation = (() => {
   function pairs(world, scratch, visit) {
     const units = world.marines;
     for (let i = 0; i < units.length; i++) {
-      const bx = bucket(units[i].x), bz = bucket(units[i].z);
-      for (let z = Math.max(0, bz - 1); z <= Math.min(bucketCount - 1, bz + 1); z++) {
-        for (let x = Math.max(0, bx - 1); x <= Math.min(bucketCount - 1, bx + 1); x++) {
+      const bx = bucket(units[i].x), bz = bucket(units[i].z), range = Math.ceil((units[i].radius + scratch.maxRadius) / bucketSize);
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range); z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range); x++) {
           for (let j = scratch.heads[z * bucketCount + x]; j >= 0; j = scratch.links[j]) {
             if (j <= i) continue;
             world.stats.neighbourChecks++; visit(i, j);
@@ -314,15 +333,16 @@ const CrowdSimulation = (() => {
     if (enemies) for (let i = 0; i < units.length; i++) {
       const m = units[i], team = world.groups[m.group].team;
       let nearest = Infinity, nearEnemy = false;
-      for (let z = bucket(m.z - contactRelease); z <= bucket(m.z + contactRelease); z++) {
-        for (let x = bucket(m.x - contactRelease); x <= bucket(m.x + contactRelease); x++) {
+      const reach = m.radius + s.maxRadius + 0.9;
+      for (let z = bucket(m.z - reach); z <= bucket(m.z + reach); z++) {
+        for (let x = bucket(m.x - reach); x <= bucket(m.x + reach); x++) {
           for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
             if (j === i || world.groups[units[j].group].team === team) continue;
             world.stats.contactChecks++;
             const other = units[j], dx = other.x - m.x, dz = other.z - m.z, distance = Math.hypot(dx, dz);
-            const retained = m.contact === j;
-            if (distance <= contactRelease) nearEnemy = true;
-            if (distance > (retained ? contactRelease : contactDistance) || distance >= nearest) continue;
+            const retained = m.contact === j, contact = m.radius + other.radius + 0.5, release = contact + 0.4;
+            if (distance <= release) nearEnemy = true;
+            if (distance > (retained ? release : contact) || distance >= nearest) continue;
             // A fresh retreat order may leave contact, but cannot force a passage through enemies.
             if (!retained && m.disengage && Math.hypot(s.vx[i], s.vz[i]) > 1e-6 && dx * s.vx[i] + dz * s.vz[i] <= 0.01) continue;
             if (!nav.canTravel(m.x, m.z, other.x, other.z)) continue;
@@ -345,11 +365,13 @@ const CrowdSimulation = (() => {
     }
   }
   function slide(marine, dx, dz) {
+    const nav = navigationFor(marine);
     if (nav.canTravel(marine.x, marine.z, marine.x + dx, marine.z + dz)) { marine.x += dx; marine.z += dz; return; }
     if (nav.canTravel(marine.x, marine.z, marine.x + dx, marine.z)) marine.x += dx;
     if (nav.canTravel(marine.x, marine.z, marine.x, marine.z + dz)) marine.z += dz;
   }
   function safeVelocity(units, s, i, nearby, vx, vz, speed, straight) {
+    const nav = navigationFor(units[i]);
     const horizon = Math.min(0.15, s.remaining[i] / speed);
     if (!nav.canTravel(units[i].x, units[i].z, units[i].x + vx * horizon, units[i].z + vz * horizon)) return false;
     for (const j of nearby) {
@@ -359,16 +381,17 @@ const CrowdSimulation = (() => {
       const dx = units[i].x - units[j].x, dz = units[i].z - units[j].z;
       const px = vx * preview - units[j].vx * otherHorizon, pz = vz * preview - units[j].vz * otherHorizon;
       const t = Math.max(0, Math.min(1, -(dx * px + dz * pz) / (px * px + pz * pz || 1)));
-      if (Math.hypot(dx + px * t, dz + pz * t) < Math.min(diameter + 0.015, Math.hypot(dx, dz)) - 1e-5) return false;
+      if (Math.hypot(dx + px * t, dz + pz * t) < Math.min(units[i].radius + units[j].radius + 0.015, Math.hypot(dx, dz)) - 1e-5) return false;
     }
     return true;
   }
   function tick(world) {
     const units = world.marines, s = scratchFor(world), dt = fixedStep;
     world.time += dt; resumeWaiting(world);
-    s.vx.fill(0); s.vz.fill(0); s.pushX.fill(0); s.pushZ.fill(0); s.remaining.fill(0);
+    s.vx.fill(0); s.vz.fill(0); s.pushX.fill(0); s.pushZ.fill(0); s.remaining.fill(0); s.maxRadius = nav.radius;
     for (let i = 0; i < units.length; i++) {
-      const marine = units[i], group = world.groups[marine.group];
+      const marine = units[i], group = world.groups[marine.group], nav = navigationFor(group);
+      s.maxRadius = Math.max(s.maxRadius, marine.radius);
       s.startX[i] = marine.x; s.startZ[i] = marine.z;
       const previous = marine.previous;
       previous.x = marine.x; previous.z = marine.z; previous.yaw = marine.yaw;
@@ -381,8 +404,9 @@ const CrowdSimulation = (() => {
       if (marine.route) {
         while (marine.route.index < marine.route.points.length) {
           const p = marine.route.points[marine.route.index];
-          if (Math.hypot(p.x - marine.x, p.z - marine.z) > 0.06) break;
           const next = marine.route.points[marine.route.index + 1];
+          // The exit itself may be a corner: reach it before handing control back to the primary field.
+          if (Math.hypot(p.x - marine.x, p.z - marine.z) > (next ? 0.06 : 1e-8)) break;
           // Being close to a corner does not yet make the following segment traversable.
           if (next && !nav.canTravel(marine.x, marine.z, next.x, next.z)) break;
           marine.route.index++;
@@ -416,13 +440,13 @@ const CrowdSimulation = (() => {
     for (let i = 0; i < units.length; i++) {
       const speed = Math.hypot(s.vx[i], s.vz[i]);
       if (speed < 1e-6) continue;
-      const nearby = [], bx = bucket(units[i].x), bz = bucket(units[i].z);
-      for (let z = Math.max(0, bz - 1); z <= Math.min(bucketCount - 1, bz + 1); z++) {
-        for (let x = Math.max(0, bx - 1); x <= Math.min(bucketCount - 1, bx + 1); x++) {
+      const nearby = [], bx = bucket(units[i].x), bz = bucket(units[i].z), range = Math.ceil((units[i].radius + s.maxRadius + 0.6) / bucketSize);
+      for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range); z++) {
+        for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range); x++) {
           for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
             if (j === i) continue;
             world.stats.neighbourChecks++;
-            if (Math.hypot(units[i].x - units[j].x, units[i].z - units[j].z) < 1.4) nearby.push(j);
+            if (Math.hypot(units[i].x - units[j].x, units[i].z - units[j].z) < units[i].radius + units[j].radius + 0.6) nearby.push(j);
           }
         }
       }
@@ -453,13 +477,14 @@ const CrowdSimulation = (() => {
       let overlaps = false;
       pairs(world, s, (i, j) => {
         let dx = units[i].x - units[j].x, dz = units[i].z - units[j].z, distance = Math.hypot(dx, dz);
-        if (distance >= diameter - 1e-5) return;
+        const separation = units[i].radius + units[j].radius;
+        if (distance >= separation - 1e-5) return;
         overlaps = true;
         if (distance < 1e-6) { const angle = i * 2.4 + j; dx = Math.cos(angle); dz = Math.sin(angle); }
         else { dx /= distance; dz /= distance; }
         const fixedI = !units[i].moving, fixedJ = !units[j].moving;
         const share = fixedI && !fixedJ ? 0 : fixedJ && !fixedI ? 1 : 0.5;
-        const push = diameter - distance + 1e-5;
+        const push = separation - distance + 1e-5;
         s.pushX[i] += dx * push * share; s.pushZ[i] += dz * push * share;
         s.pushX[j] -= dx * push * (1 - share); s.pushZ[j] -= dz * push * (1 - share);
       });
@@ -468,17 +493,17 @@ const CrowdSimulation = (() => {
     }
     buildBuckets(units, s);
     for (let i = 0; i < units.length; i++) {
-      const marine = units[i], group = world.groups[marine.group];
+      const marine = units[i], group = world.groups[marine.group], nav = navigationFor(group);
       const distance = marine.target ? Math.hypot(marine.target.x - marine.x, marine.target.z - marine.z) : 0;
       let snapClear = true;
       if (marine.target && distance > 0 && distance <= 0.03) {
-        const bx = bucket(marine.target.x), bz = bucket(marine.target.z);
-        for (let z = Math.max(0, bz - 1); z <= Math.min(bucketCount - 1, bz + 1) && snapClear; z++) {
-          for (let x = Math.max(0, bx - 1); x <= Math.min(bucketCount - 1, bx + 1) && snapClear; x++) {
+        const bx = bucket(marine.target.x), bz = bucket(marine.target.z), range = Math.ceil((marine.radius + s.maxRadius) / bucketSize);
+        for (let z = Math.max(0, bz - range); z <= Math.min(bucketCount - 1, bz + range) && snapClear; z++) {
+          for (let x = Math.max(0, bx - range); x <= Math.min(bucketCount - 1, bx + range) && snapClear; x++) {
             for (let j = s.heads[z * bucketCount + x]; j >= 0; j = s.links[j]) {
               if (i === j) continue;
               world.stats.neighbourChecks++;
-              if (Math.hypot(marine.target.x - units[j].x, marine.target.z - units[j].z) < diameter - 1e-5) { snapClear = false; break; }
+              if (Math.hypot(marine.target.x - units[j].x, marine.target.z - units[j].z) < marine.radius + units[j].radius - 1e-5) { snapClear = false; break; }
             }
           }
         }
@@ -556,6 +581,6 @@ const CrowdSimulation = (() => {
     }
     return ground;
   }
-  return { halfSize, contactDistance, contactRelease, createMarine, createWorld, createGroup, spawnMarine, spawnMarines,
+  return { halfSize, contactDistance, contactRelease, createMarine, createTank, createWorld, createGroup, spawnMarine, spawnMarines,
     moveTo, hold, setTeam, update, renderMarine, cameraFrame, groundPoint };
 })();

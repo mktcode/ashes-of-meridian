@@ -175,6 +175,30 @@ try {
   await page.waitForFunction(n => window.frames > n + 6, freeze.frame);
   assert.equal(await page.evaluate(() => JSON.stringify(world.marines)), freeze.state);
   assert.equal(await page.evaluate(() => window.uploads), uploads);
+  await page.selectOption('#scenario', 'mixed'); await page.fill('#scenario-count', '16'); await page.click('#scenario-start');
+  assert.equal(await page.textContent('#unit-count'), '18'); assert.equal(await page.isChecked('#hostile'), false);
+  await page.waitForFunction(() => window.drawCount === 13 + 16 * MarineModel.parts.length + 2 * TankModel.parts.length);
+  const tanks = await page.evaluate(() => {
+    const pack = MarineInstances.create(); pack.begin(2 * TankModel.parts.length);
+    const before = JSON.stringify(world.marines);
+    for (const unit of world.marines.filter(m => m.kind === 'tank')) pack.tank(CrowdSimulation.renderMarine(world, unit), [0.65, 0.28, 0.18]);
+    const gpu = new Float32Array(window.drawCount * MarineInstances.stride), gl = window.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, window.instanceBuffer); gl.getBufferSubData(gl.ARRAY_BUFFER, 0, gpu);
+    const start = (13 + 16 * MarineModel.parts.length) * MarineInstances.stride;
+    let maxError = 0;
+    for (let i = 0; i < pack.count * MarineInstances.stride; i++) maxError = Math.max(maxError, Math.abs(gpu[start + i] - pack.data[i]));
+    return { maxError, pure: before === JSON.stringify(world.marines), kinds: world.groups.map(g => g.kind), fields: world.stats.fieldBuilds };
+  });
+  assert.equal(tanks.maxError, 0); assert.equal(tanks.pure, true); assert.deepEqual(tanks.kinds, ['marine', 'tank']); assert.equal(tanks.fields, 2);
+  const marinesBeforeTankSpawn = await page.evaluate(() => JSON.stringify(world.marines.filter(m => m.group === 0)));
+  await page.selectOption('#active-group', '1'); await page.click('#spawn');
+  assert.equal(await page.textContent('#unit-count'), '19');
+  assert.ok(await page.evaluate(() => world.marines.at(-1).kind === 'tank' && world.marines.at(-1).target && world.stats.fieldBuilds === 2));
+  assert.equal(await page.evaluate(() => JSON.stringify(world.marines.filter(m => m.group === 0))), marinesBeforeTankSpawn);
+  await page.waitForFunction(() => window.drawCount === 13 + 16 * MarineModel.parts.length + 3 * TankModel.parts.length);
+  const tankPause = await page.evaluate(() => ({ state: JSON.stringify(world.marines), uploads: window.uploads, frame: window.frames }));
+  await page.waitForFunction(n => window.frames > n + 4, tankPause.frame);
+  assert.deepEqual(await page.evaluate(() => ({state: JSON.stringify(world.marines), uploads: window.uploads})), {state:tankPause.state, uploads:tankPause.uploads});
   const glError = await page.evaluate(() => window.gl.getError()); assert.equal(glError, 0); assert.deepEqual(errors, []);
-  console.log('Browser file://: actual GPU instances/attributes/palettes, interpolation, terrain feet, pause cache, camera/picking, 1000-unit batch, occluded arrival, independent group commands, hold/spawn/team controls and shader/GL errors checked.');
+  console.log('Browser file://: actual GPU Marine/tank instances, attributes/palettes, interpolation, terrain feet, pause cache, camera/picking, 1000-unit batch, occluded arrival, independent typed groups, hold/spawn/team controls and shader/GL errors checked.');
 } finally { await browser.close(); }

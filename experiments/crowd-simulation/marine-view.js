@@ -233,7 +233,7 @@
       const group = world.groups[selectedGroup()], members = world.marines.filter(m => m.group === group.id);
       const contacts = members.filter(m => m.state === 'contact').length;
       const pending = members.filter(m => m.state === 'moving' || m.state === 'waiting').length;
-      const message = world.notice || (paused ? 'Pausiert' : `Gruppe ${group.id === 0 ? 'A' : 'B'} · ${members.length} Marines · ${contacts} im Kontakt · ${pending} unterwegs · `
+      const message = world.notice || (paused ? 'Pausiert' : `Gruppe ${group.id === 0 ? 'A' : 'B'} · ${members.length} ${group.kind === 'tank' ? 'Panzer' : 'Marines'} · ${contacts} im Kontakt · ${pending} unterwegs · `
         + (group.order === 'hold' ? 'Halt' : group.destination ? `Ziel (${group.destination.x.toFixed(1)}, ${group.destination.z.toFixed(1)})` : 'Klick setzt das Gruppenziel.'));
       if (status.textContent !== message) status.textContent = message;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -258,7 +258,8 @@
       const dirty = world.stats.steps !== lastSteps || world.accumulator !== lastAccumulator || world.marines !== lastUnits
         || world.marines.length !== lastCount || world.revision !== lastRevision || view !== lastView;
       if (dirty) {
-        instances.begin(world.marines.length * MarineModel.parts.length + CrowdNavigation.obstacles.length + world.groups.filter(g => g.destination).length * 2);
+        instances.begin(world.marines.reduce((sum, unit) => sum + (unit.kind === 'tank' ? TankModel.parts.length : MarineModel.parts.length), 0)
+          + CrowdNavigation.obstacles.length + world.groups.filter(g => g.destination).length * 2);
         for (const obstacle of CrowdNavigation.obstacles) {
           const root = translate([obstacle.x, obstacle.baseY, obstacle.z]);
           box(root, [0, obstacle.height / 2, 0], [obstacle.width, obstacle.height, obstacle.depth], [0.44, 0.40, 0.34]);
@@ -273,7 +274,11 @@
         visibleCount = 0;
         for (const unit of world.marines) {
           const marine = CrowdSimulation.renderMarine(world, unit);
-          if (MarineInstances.visible(marine, camera)) { instances.marine(marine, null, unit.group === 0 ? null : groupColors[unit.group % groupColors.length]); visibleCount++; }
+          if (!MarineInstances.visible(marine, camera, unit.kind === 'tank' ? TankModel.cullingRadius : MarineInstances.radius)) continue;
+          const color = unit.group === 0 ? null : groupColors[unit.group % groupColors.length];
+          if (unit.kind === 'tank') instances.tank(marine, color);
+          else instances.marine(marine, null, color);
+          visibleCount++;
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
         if (instanceBytes !== instances.data.byteLength) {

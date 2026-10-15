@@ -2,26 +2,30 @@
 
 // Rare, shared local routing around resting bodies. Static detours use the shared navigation tree.
 const CrowdRecovery = (() => {
-  const nav = CrowdNavigation, step = 0.05, radius = 6, side = Math.round(radius * 2 / step) + 1;
-  const bodyRadius = nav.radius * 2 + 0.02, states = new WeakMap(), expansionBudget = 8192, cacheLimit = 8;
+  const step = 0.05, radius = 6, side = Math.round(radius * 2 / step) + 1;
+  const states = new WeakMap(), expansionBudget = 8192, cacheLimit = 8;
+  const within = (p, center, nav) => Math.abs(p.x - center.x) <= radius + nav.radius + p.unit.radius + 0.02
+    && Math.abs(p.z - center.z) <= radius + nav.radius + p.unit.radius + 0.02;
   function snapshot(world, marine) {
-    return world.marines.filter(m => m !== marine && (!m.moving || m.waitingForRoute || m.yieldUntil > world.time)).map(m => ({ unit: m, x: m.x, z: m.z }));
+    return world.marines.filter(m => m !== marine && (!m.moving || m.waitingForRoute || m.yieldUntil > world.time
+      || (marine.kind === 'tank' || m.kind === 'tank') && m.stalledFor > 1 && Math.hypot(m.vx, m.vz) < 0.05)).map(m => ({ unit: m, x: m.x, z: m.z }));
   }
   function same(a, b) {
     return a.length === b.length && a.every((p, i) => p.unit === b[i].unit && p.x === b[i].x && p.z === b[i].z);
   }
-  function clearLine(a, b, parked) {
+  function clearLine(a, b, parked, nav) {
     if (!nav.canTravel(a.x, a.z, b.x, b.z)) return false;
     const dx = b.x - a.x, dz = b.z - a.z, length = dx * dx + dz * dz;
     for (const p of parked) {
       const ax = a.x - p.x, az = a.z - p.z;
       const t = Math.max(0, Math.min(1, -(ax * dx + az * dz) / (length || 1)));
       // Permit escape from existing solver contact, but never move closer into that body.
-      if ((ax + dx * t) ** 2 + (az + dz * t) ** 2 < Math.min((nav.radius * 2 + 0.015) ** 2, ax * ax + az * az) - 1e-8) return false;
+      if ((ax + dx * t) ** 2 + (az + dz * t) ** 2 < Math.min((nav.radius + p.unit.radius + 0.015) ** 2, ax * ax + az * az) - 1e-8) return false;
     }
     return true;
   }
   function createField(group, center, goal, parked, target) {
+    const nav = CrowdNavigation.forKind(group.kind);
     const ox = center.x - radius, oz = center.z - radius, count = side * side;
     const blocked = new Uint8Array(count), cost = new Float64Array(count).fill(Infinity), next = new Int32Array(count).fill(-1);
     const closed = new Uint8Array(count), heapIndex = [], heapCost = [];
@@ -30,8 +34,9 @@ const CrowdRecovery = (() => {
       const p = point(i);
       blocked[i] = !nav.canStand(p.x, p.z) || !Number.isFinite(group.field.cost[nav.indexAt(p.x, p.z)]) ? 1 : 0;
     }
-    const nearby = parked.filter(p => Math.abs(p.x - center.x) <= radius + bodyRadius && Math.abs(p.z - center.z) <= radius + bodyRadius);
+    const nearby = parked.filter(p => within(p, center, nav));
     for (const p of nearby) {
+      const bodyRadius = nav.radius + p.unit.radius + 0.02;
       const left = Math.max(0, Math.ceil((p.x - bodyRadius - ox) / step)), right = Math.min(side - 1, Math.floor((p.x + bodyRadius - ox) / step));
       const back = Math.max(0, Math.ceil((p.z - bodyRadius - oz) / step)), front = Math.min(side - 1, Math.floor((p.z + bodyRadius - oz) / step));
       for (let z = back; z <= front; z++) for (let x = left; x <= right; x++) {
@@ -77,7 +82,7 @@ const CrowdRecovery = (() => {
     return { ox, oz, blocked, cost, next, closed, heapIndex, point, nearby, push, pop, goal, potential };
   }
   function plan(world, marine, target = marine.target) {
-    const group = world.groups[marine.group];
+    const group = world.groups[marine.group], nav = CrowdNavigation.forKind(group.kind);
     nav.prepareTarget(group.field, target);
     const now = world.time, parked = snapshot(world, marine);
     let state = states.get(group);
@@ -88,7 +93,7 @@ const CrowdRecovery = (() => {
     const center = close ? target : { x: Math.round(marine.x / 4) * 4, z: Math.round(marine.z / 4) * 4 };
     const final = close || Math.max(Math.abs(target.x - center.x), Math.abs(target.z - center.z)) <= radius - 0.5;
     const key = close ? target : `tile:${center.x}:${center.z}:${target.x}:${target.z}`;
-    const nearby = parked.filter(p => Math.abs(p.x - center.x) <= radius + bodyRadius && Math.abs(p.z - center.z) <= radius + bodyRadius);
+    const nearby = parked.filter(p => within(p, center, nav));
     let field = state.fields.get(key);
     // Do not discard unfinished work every time a distant marine parks or a short yield expires.
     if (field && (!field.pending && now - field.refreshed >= 0.5 || field.nearby.some(p => p.unit === marine)) && !same(field.nearby, nearby)) {
@@ -115,7 +120,7 @@ const CrowdRecovery = (() => {
         const i = z * side + x;
         if (field.blocked[i]) continue;
         const p = field.point(i), distance = (p.x - marine.x) ** 2 + (p.z - marine.z) ** 2;
-        if (distance < nearest && clearLine(marine, p, nearby)) { nearest = distance; start = i; }
+        if (distance < nearest && clearLine(marine, p, nearby, nav)) { nearest = distance; start = i; }
       }
     }
     if (start < 0) return blockedResult();
@@ -147,10 +152,10 @@ const CrowdRecovery = (() => {
     const points = [];
     let anchor = marine, last = null;
     for (const p of raw) {
-      if (!clearLine(anchor, p, nearby)) {
-        if (!last || !clearLine(anchor, last, nearby)) return staleResult();
+      if (!clearLine(anchor, p, nearby, nav)) {
+        if (!last || !clearLine(anchor, last, nearby, nav)) return staleResult();
         points.push(last); anchor = last;
-        if (!clearLine(anchor, p, nearby)) return staleResult();
+        if (!clearLine(anchor, p, nearby, nav)) return staleResult();
       }
       last = p;
     }

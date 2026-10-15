@@ -19,36 +19,37 @@
   </style>
 </head>
 <body>
-  <h1>Crowd Simulation · Gruppen & Kontakt</h1>
-  <p>Zwei unabhängig befehligte Gruppen auf einer 128 × 128 großen Karte: A trägt Grün, B Orange. Wähle die aktive Gruppe für Klickziele, Spawns und Halt. Jede Gruppe nutzt ein gemeinsames Flow Field. Bei aktiviertem Gegnerkontakt halten Marines in Begegnungsdistanz an; ein Rückzugsziel löst den Kontakt. Noch keine Waffen, Schaden oder taktische KI.</p>
+  <h1>Crowd Simulation · Marines & Panzer</h1>
+  <p>Zwei unabhängig befehligte Gruppen auf einer 128 × 128 großen Karte: A trägt Grün, B Orange. Wähle die aktive Gruppe für Klickziele, Spawns und Halt. Jede Gruppe nutzt ein gemeinsames Flow Field. Die gemischten Szenen ergänzen größere, vereinfachte Panzer in Gruppe B. Gegnerkontakt berücksichtigt beide Körpergrößen; ein Rückzugsziel löst den Kontakt. Noch kein Beschuss, Schaden oder realistischer Wendekreis.</p>
   <div class="controls">
     <label>Aktive Gruppe <select id="active-group"><option value="0">A · Grün</option><option value="1">B · Orange</option></select></label>
     <button id="hold" type="button">Gruppe halten</button>
     <label><input id="hostile" type="checkbox"> A und B sind Gegner</label>
-    <label>Szene <select id="scenario"><option value="counterflow">Engpass / Gegenverkehr</option><option value="crossing">Kreuzende Wege</option><option value="standing">Stehende Gruppe passieren</option><option value="contact">Frontaler Gegnerkontakt</option></select></label>
-    <label>Je Gruppe <input id="scenario-count" type="number" min="1" max="500" value="32" style="width: 76px"></label>
+    <label>Szene <select id="scenario"><option value="counterflow">Engpass / Gegenverkehr</option><option value="crossing">Kreuzende Wege</option><option value="standing">Stehende Gruppe passieren</option><option value="contact">Frontaler Gegnerkontakt</option><option value="mixed">Marines & Panzer: Gegenverkehr</option><option value="mixed-standing">Stehende Panzer passieren</option><option value="mixed-contact">Marines & Panzer: Gegnerkontakt</option></select></label>
+    <label>Größe <input id="scenario-count" type="number" min="1" max="500" value="32" style="width: 76px"></label>
     <button id="scenario-start" type="button">Szene neu starten</button>
   </div>
   <div class="controls">
     <label>Tempo <input id="speed" type="range" min="0.25" max="5" step="0.05" value="1"><output id="speed-value">1.00×</output></label>
-    <button id="spawn" type="button">Marine spawnen</button>
-    <button id="spawn-ten" type="button">10 Marines spawnen</button>
-    <button id="spawn-hundred" type="button">100 Marines spawnen</button>
-    <button id="spawn-thousand" type="button">1.000 Marines spawnen</button>
-    <span>Marines: <output id="unit-count" aria-label="Anzahl Marines">1</output></span>
+    <button id="spawn" type="button">Einheit spawnen</button>
+    <button id="spawn-ten" type="button">10 Einheiten spawnen</button>
+    <button id="spawn-hundred" type="button">100 Einheiten spawnen</button>
+    <button id="spawn-thousand" type="button">1.000 Einheiten spawnen</button>
+    <span>Einheiten: <output id="unit-count" aria-label="Anzahl Einheiten">1</output></span>
     <button id="pause" type="button" aria-pressed="false">Pause</button>
     <button id="reset" type="button">Kamera zurücksetzen</button>
     <button id="focus" type="button">Crowd zentrieren</button>
   </div>
-  <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt die aktive Marine-Gruppe zum Ziel"></canvas>
+  <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt die aktive Gruppe zum Ziel"></canvas>
   <p id="metrics" aria-label="Technische Messwerte"></p>
   <p id="status" role="status">Klick auf das Spielfeld setzt das Ziel der aktiven Gruppe.</p>
-  <small>Klick / Tippen: aktive Gruppe bewegen · Ziehen: Kamera drehen / neigen · Mitteltaste oder Umschalt + Ziehen: Karte verschieben · Mausrad: zoomen.<br>Die Zielkreuze gehören zu den jeweiligen Gruppen. Halt gibt Reservierungen frei und hält die aktuellen Positionen. Gegnerkontakt ist kein Erreichen des Laufziels: Marines bleiben stehen, blicken zum Gegner und geben ihren Standplatz frei. Ein neuer Befehl vom Gegner weg erlaubt Rückzug; nach Ende des Kontakts wird ein noch aktiver Laufbefehl fortgesetzt. „Szene neu starten“ ersetzt beide Gruppen, auch während der Pause. Hindernisse, Körpergröße, Fuß-IK und begehbares Gelände bleiben unverändert.</small>
+  <small>Klick / Tippen: aktive Gruppe bewegen · Ziehen: Kamera drehen / neigen · Mitteltaste oder Umschalt + Ziehen: Karte verschieben · Mausrad: zoomen.<br>Die Zielkreuze gehören zu den jeweiligen Gruppen. Halt gibt Reservierungen frei und hält die aktuellen Positionen. Gegnerkontakt ist kein Erreichen des Laufziels: Einheiten bleiben stehen, blicken zum Gegner und geben ihren Standplatz frei. Ein neuer Befehl vom Gegner weg erlaubt Rückzug; nach Ende des Kontakts wird ein noch aktiver Laufbefehl fortgesetzt. „Szene neu starten“ ersetzt beide Gruppen, auch während der Pause. Die Größe gilt sonst je Marine-Gruppe; gemischt erhält B einen Panzer je acht Marines. Die Spawnbuttons übernehmen den Einheitentyp der aktiven Gruppe. Panzer nutzen einen größeren runden Kollisionskörper und eigene Navigationsfreiheit; Marine-Maße, Hindernisse und Fuß-IK bleiben unverändert.</small>
   <script src="marine-model.js"></script>
   <script src="crowd-terrain.js"></script>
   <script src="crowd-navigation.js"></script>
   <script src="crowd-recovery.js"></script>
   <script src="crowd-core.js"></script>
+  <script src="tank-model.js"></script>
   <script src="crowd-scenarios.js"></script>
   <script src="marine-instances.js"></script>
   <script src="marine-view.js"></script>
