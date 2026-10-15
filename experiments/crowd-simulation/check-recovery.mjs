@@ -64,9 +64,10 @@ for (let i = 0; i < parked.length; i++) {
   parked[i].target = p; put(parked[i], p, false);
 }
 put(sealed.mover, { x: sealed.goal.x, z: sealed.goal.z - 3 }, true);
-sealed.world.slots = sealed.world.marines.map(m => m.target); sealed.world.reservedSlots = new Set(sealed.world.slots);
-const pool = sealed.world.slotPool, original = sealed.mover.target;
-sealed.world.slotPool = sealed.world.slots.slice(); // No legal spare yet.
+const group = sealed.world.groups[0];
+group.reservedSlots = new Set(sealed.world.marines.map(m => m.target));
+const pool = group.slotPool, original = sealed.mover.target;
+group.slotPool = Array.from(group.reservedSlots); // No legal spare yet.
 sealed.mover.bestDistance = 0; sealed.mover.stalledFor = 3;
 core.update(sealed.world, 1 / 60);
 assert.ok(sealed.mover.stalledFor >= 3, 'unsuccessful recovery must not erase persistent lack of progress');
@@ -74,14 +75,39 @@ assert.equal(sealed.mover.target, original); assert.equal(sealed.mover.moving, t
 assert.ok(sealed.mover.yieldUntil > sealed.world.time, 'failed search waits quietly instead of oscillating');
 const position = { x: sealed.mover.x, z: sealed.mover.z };
 core.update(sealed.world, 0.2); assert.equal(sealed.mover.x, position.x); assert.equal(sealed.mover.z, position.z);
-sealed.world.slotPool = pool; sealed.world.recoveryAfter = 0;
+group.slotPool = pool; sealed.world.recoveryAfter = 0;
 sealed.mover.recoverAfter = sealed.mover.yieldUntil = 0;
 arrive(sealed.world, 35);
 assert.notEqual(sealed.mover.target, original); assert.equal(sealed.mover.target.row, original.row);
-assert.equal(sealed.world.stats.retargets, 1); assert.equal(sealed.world.reservedSlots.has(original), false);
-const oldTargets = sealed.world.marines.map(m => m.target), field = sealed.world.field;
+assert.equal(sealed.world.stats.retargets, 1); assert.equal(group.reservedSlots.has(original), false);
+const oldTargets = sealed.world.marines.map(m => m.target), field = group.field;
 assert.ok(core.spawnMarine(sealed.world), 'spawning still works after a spare replaces a prefix reservation');
 assert.equal(new Set(sealed.world.marines.map(m => m.target)).size, sealed.world.marines.length);
 for (let i = 0; i < oldTargets.length; i++) assert.equal(sealed.world.marines[i].target, oldTargets[i]);
-arrive(sealed.world, 40); assert.equal(sealed.world.field, field); assert.equal(sealed.world.stats.fieldBuilds, 1);
-console.log('Recovery: fine-grid passing lanes, physical detours, cached search continuation, fixed bodies/rows, persistent failed progress, quiet waiting, same-row spare and safe spawn after reassignment checked.');
+arrive(sealed.world, 40); assert.equal(group.field, field); assert.equal(sealed.world.stats.fieldBuilds, 1);
+// Do not skip a nearly reached rock-corner waypoint while the next segment still clips the blocker.
+const cornerWorld = core.createWorld(); cornerWorld.marines = [core.createMarine(20.945409942895157, 5.8874634553044585)];
+assert.ok(core.moveTo(cornerWorld, { x: 28.787456622544205, z: 4.289863249735207 }));
+const cornerMover = cornerWorld.marines[0]; cornerMover.runWeight = 1;
+cornerMover.route = { index: 0, points: [{ x: 20.95, z: 6, remaining: 5.15 }, { x: 25, z: 6, remaining: 1.1 }, { x: 26, z: 5.55, remaining: 0 }] };
+for (let tick = 0; tick < 3; tick++) core.update(cornerWorld, 1 / 60);
+assert.equal(cornerMover.route.index, 0, 'the corner stays active until its successor is actually visible');
+arrive(cornerWorld, 20); assert.equal(cornerWorld.stats.fieldBuilds, 1);
+
+// A permanently failed unit cannot monopolise the shared scheduler or keep probing while queued.
+const queue = core.createWorld(); core.spawnMarines(queue, 2); core.moveTo(queue, { x: -8, z: 8 });
+const queueGroup = queue.groups[0], queueField = queueGroup.field, seen = [], planner = recovery.plan;
+queueGroup.slotPool = Array.from(queueGroup.reservedSlots);
+for (let i = 0; i < queue.marines.length; i++) Object.assign(queue.marines[i], { stalledFor: 100 - i, bestDistance: 0, bestFieldDistance: 0 });
+try {
+  recovery.plan = (w, m) => { seen.push(m); return { status: 'blocked' }; };
+  for (let tick = 0; tick < 150; tick++) core.update(queue, 1 / 60);
+  assert.deepEqual(seen.slice(0, 3), queue.marines, 'least-recently-serviced queue reaches all stalled actors');
+  assert.ok(queue.marines.every(m => m.waitingForRoute && m.state === 'waiting' && m.moving && m.runWeight < 0.001), 'failed searches stay physically quiet without pretending to arrive');
+  const stopped = queue.marines.map(m => [m.x, m.z]);
+  for (let tick = 0; tick < 60; tick++) core.update(queue, 1 / 60);
+  assert.deepEqual(queue.marines.map(m => [m.x, m.z]), stopped);
+} finally { recovery.plan = planner; }
+assert.ok(core.moveTo(queue, { x: -8, z: 8 })); assert.ok(queue.marines.every(m => !m.waitingForRoute));
+assert.equal(queueGroup.field, queueField); assert.equal(queue.stats.fieldBuilds, 1);
+console.log('Recovery: fine-grid lanes, physical detours, cached continuation, fixed bodies/rows, persistent failure, quiet/fair retry queue, explicit retry, same-row spare and safe late spawn checked.');

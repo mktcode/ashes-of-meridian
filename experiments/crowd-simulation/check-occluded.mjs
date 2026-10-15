@@ -36,12 +36,12 @@ const mover = world.marines.find(m => !nav.canTravel(goal.x, goal.z, m.target.x,
 assert.ok(mover); world.marines = [mover];
 mover.x = goal.x; mover.z = goal.z; mover.y = terrain.heightAt(mover.x, mover.z);
 Object.assign(mover.previous, { x: mover.x, z: mover.z });
-const target = mover.target, shared = world.field;
+const target = mover.target, shared = world.groups[0].field;
 let tick = 0;
 for (; tick < 1800; tick++) {
   core.update(world, 1 / 60);
   assert.ok(nav.canStand(mover.x, mover.z)); assert.equal(mover.y, terrain.heightAt(mover.x, mover.z));
-  assert.equal(mover.target, target); assert.equal(world.field, shared);
+  assert.equal(mover.target, target); assert.equal(world.groups[0].field, shared);
   if (!mover.moving && mover.runWeight < 0.001) break;
 }
 assert.ok(tick < 1800, 'the unit reaches its own hidden reservation instead of circling the shared click');

@@ -30,12 +30,12 @@ const world = core.createWorld(), marine = world.marines[0];
 advance(world, 0.5);
 assert.equal(marine.x, 0); assert.equal(marine.z, 0); assert.equal(marine.moving, false); assert.equal(marine.runWeight, 0);
 assert.ok(core.moveTo(world, { x: 6, z: 0 }));
-const field = world.field;
+const field = world.groups[0].field;
 let detour = 0;
 for (let tick = 0; tick < 900; tick++) {
   core.update(world, 1 / 60); valid(world);
   detour = Math.max(detour, Math.abs(marine.z));
-  assert.equal(world.field, field, 'field is reused, not rebuilt as units move');
+  assert.equal(world.groups[0].field, field, 'field is reused, not rebuilt as units move');
 }
 assert.ok(detour >= 3.5, 'flow field detours around the rock instead of walking through it');
 assert.equal(marine.x, 6); assert.equal(marine.z, 0); assert.equal(marine.moving, false);
@@ -59,9 +59,9 @@ for (let i = 0; i < crowd.marines.length; i++) for (let j = i + 1; j < crowd.mar
 }
 assert.ok(core.moveTo(crowd, { x: 6, z: 0 }));
 advance(crowd, 0.5);
-const oldTargets = crowd.marines.map(m => m.target), oldField = crowd.field;
+const oldTargets = crowd.marines.map(m => m.target), oldField = crowd.groups[0].field;
 assert.ok(core.spawnMarine(crowd));
-assert.equal(crowd.field, oldField, 'spawn inherits the field without a new Dijkstra search');
+assert.equal(crowd.groups[0].field, oldField, 'spawn inherits the field without a new Dijkstra search');
 assert.ok(crowd.marines.at(-1).moving);
 for (let i = 0; i < oldTargets.length; i++) assert.equal(crowd.marines[i].target, oldTargets[i], 'spawning does not reshuffle reserved slots');
 arrive(crowd);

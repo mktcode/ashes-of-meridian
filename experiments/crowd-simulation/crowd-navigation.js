@@ -2,7 +2,7 @@
 
 const CrowdNavigation = (() => {
   const halfSize = CrowdTerrain.halfSize, cellSize = 0.5, cells = halfSize * 2 / cellSize;
-  const radius = 0.4, maxSlope = 0.6;
+  const radius = 0.4, maxSlope = 0.6, parkingSpacing = radius * 4 + 0.15;
   const obstacles = [
     { x: 2.5, z: 0, width: 2, depth: 6, height: 3 },
     { x: -16, z: -12, width: 7, depth: 3, height: 2.8 },
@@ -168,7 +168,7 @@ const CrowdNavigation = (() => {
   }
   function places(point, limit, field = null, direction = null) {
     // Leave passing lanes between parked bodies instead of sealing off inner slots.
-    const candidates = [], spacing = radius * 4 + 0.15, rings = Math.ceil(halfSize * 4 / spacing);
+    const candidates = [], spacing = parkingSpacing, rings = Math.ceil(halfSize * 4 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
       const dx = spacing * (q + r / 2), dz = spacing * Math.sqrt(3) / 2 * r;
       const x = point.x + (direction ? direction.x * dx - direction.z * dz : dx);
@@ -195,5 +195,5 @@ const CrowdNavigation = (() => {
     return candidates.slice(0, limit).map(({ x, z }) => ({ x, z }));
   }
   const spawnSites = places({ x: 0, z: 0 }, count);
-  return { halfSize, cellSize, cells, radius, maxSlope, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
+  return { halfSize, cellSize, cells, radius, maxSlope, parkingSpacing, obstacles, walkable, neighbours, indexAt, pointAt, canStand, canTravel, buildField, direction, prepareTarget, travelDistance, places, spawnSites };
 })();

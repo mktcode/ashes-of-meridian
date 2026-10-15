@@ -2,7 +2,7 @@
 
 // CPU rig sampling and packed instance transforms are independent of WebGL and movement decisions.
 const MarineInstances = (() => {
-  const stride = 19, parts = MarineModel.parts;
+  const stride = 19, parts = MarineModel.parts, armor = parts.find(p => p.name === 'chest').color;
   const names = new Map(parts.map((p, i) => [p.name, i]));
   const parents = parts.map((p, i) => {
     if (!p.parent) return -1;
@@ -62,7 +62,7 @@ const MarineInstances = (() => {
         out[offset + 15] = 1;
         out.set(color, offset + 16);
       },
-      marine(marine, pose = null) {
+      marine(marine, pose = null, armorColor = null) {
         const c = Math.cos(marine.yaw), s = Math.sin(marine.yaw);
         if (!pose) {
           const ground = (x, z) => CrowdTerrain.heightAt(marine.x + c * x + s * z, marine.z - s * x + c * z) - marine.y;
@@ -76,7 +76,7 @@ const MarineInstances = (() => {
           else rotation(local, animation?.rotation || zero);
           local[12] = part.pivot[0] + offset[0]; local[13] = part.pivot[1] + offset[1]; local[14] = part.pivot[2] + offset[2];
           multiply(joints[i], parents[i] < 0 ? root : joints[parents[i]], local);
-          this.box(joints[i], part.center, part.size, part.color);
+          this.box(joints[i], part.center, part.size, armorColor && part.color === armor ? armorColor : part.color);
         }
       },
     };

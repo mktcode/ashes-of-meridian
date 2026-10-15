@@ -17,12 +17,12 @@ function valid(world) {
   }
 }
 function arrive(world, firstArrival = null) {
-  const rows = world.marines.map(m => m.target.row), field = world.field;
+  const rows = world.marines.map(m => m.target.row), field = world.groups[0].field;
   const parked = new Map();
   let first = true;
   for (let tick = 0; tick < 2400; tick++) {
     core.update(world, 1 / 60); valid(world);
-    assert.equal(world.field, field);
+    assert.equal(world.groups[0].field, field);
     for (let i = 0; i < rows.length; i++) {
       const m = world.marines[i];
       assert.equal(m.target.row, rows[i], 'recovery cannot undo the front-to-rear row allocation');
@@ -45,7 +45,7 @@ for (const [goal, axis] of [
   world.marines = Array.from({ length: 7 }, (_, i) => core.createMarine(goal.x - axis.x * (3 + i * 2), goal.z - axis.z * (3 + i * 2)));
   valid(world);
   assert.ok(core.moveTo(world, goal));
-  assert.ok(Math.abs(world.arrivalDirection.x - axis.x) < 1e-10 && Math.abs(world.arrivalDirection.z - axis.z) < 1e-10);
+  assert.ok(Math.abs(world.groups[0].arrivalDirection.x - axis.x) < 1e-10 && Math.abs(world.groups[0].arrivalDirection.z - axis.z) < 1e-10);
   assert.ok(projection(world.marines[0].target, axis) > projection(goal, axis), 'leading marine continues beyond the clicked point');
   assert.ok(projection(world.marines.at(-1).target, axis) < projection(goal, axis), 'rear marine gets the approach side');
   for (let i = 1; i < world.marines.length; i++) assert.ok(world.marines[i].target.row >= world.marines[i - 1].target.row);
@@ -68,7 +68,7 @@ arrive(lanes);
 const large = core.createWorld();
 for (let i = 1; i < 50; i++) assert.ok(core.spawnMarine(large));
 assert.ok(core.moveTo(large, { x: 6, z: 0 }));
-const d = large.arrivalDirection;
+const d = large.groups[0].arrivalDirection;
 const ordered = large.marines.slice().sort((a, b) => projection(b, d) - projection(a, d)
   || (a.z - b.z) * d.x - (a.x - b.x) * d.z);
 for (let i = 1; i < ordered.length; i++) assert.ok(ordered[i].target.row >= ordered[i - 1].target.row);
@@ -80,7 +80,7 @@ const recovery = core.createWorld();
 recovery.marines = [core.createMarine(0, 6), core.createMarine(0, 4)];
 assert.ok(core.moveTo(recovery, { x: 0, z: 10 }));
 const targets = recovery.marines.map(m => m.target);
-assert.ok(targets[0].z > recovery.destination.z, 'even a two-marine arrival reserves the far side first');
+assert.ok(targets[0].z > recovery.groups[0].destination.z, 'even a two-marine arrival reserves the far side first');
 assert.notEqual(targets[0].row, targets[1].row);
 function putAt(m, target, stalled = true) {
   m.x = target.x; m.z = target.z; m.y = terrain.heightAt(m.x, m.z);

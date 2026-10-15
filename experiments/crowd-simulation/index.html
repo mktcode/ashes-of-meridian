@@ -19,8 +19,16 @@
   </style>
 </head>
 <body>
-  <h1>Crowd Simulation · Marine</h1>
-  <p>Ein minimales RTS-Experiment auf einem 128 × 128 großen, hügeligen Spielfeld: Ein Klick setzt das gemeinsame Ziel für alle Marines — ohne Auswahl. Mit „Marine spawnen“ fügst du weitere Einheiten hinzu, die auch ein bereits gesetztes Ziel übernehmen. Ein gemeinsames Flow Field führt um neun verteilte Felsblöcke herum. Steile, graue Berghänge am Rand sind unbegehbar; Marines weichen einander aus.</p>
+  <h1>Crowd Simulation · Gruppen & Kontakt</h1>
+  <p>Zwei unabhängig befehligte Gruppen auf einer 128 × 128 großen Karte: A trägt Grün, B Orange. Wähle die aktive Gruppe für Klickziele, Spawns und Halt. Jede Gruppe nutzt ein gemeinsames Flow Field. Bei aktiviertem Gegnerkontakt halten Marines in Begegnungsdistanz an; ein Rückzugsziel löst den Kontakt. Noch keine Waffen, Schaden oder taktische KI.</p>
+  <div class="controls">
+    <label>Aktive Gruppe <select id="active-group"><option value="0">A · Grün</option><option value="1">B · Orange</option></select></label>
+    <button id="hold" type="button">Gruppe halten</button>
+    <label><input id="hostile" type="checkbox"> A und B sind Gegner</label>
+    <label>Szene <select id="scenario"><option value="counterflow">Engpass / Gegenverkehr</option><option value="crossing">Kreuzende Wege</option><option value="standing">Stehende Gruppe passieren</option><option value="contact">Frontaler Gegnerkontakt</option></select></label>
+    <label>Je Gruppe <input id="scenario-count" type="number" min="1" max="500" value="32" style="width: 76px"></label>
+    <button id="scenario-start" type="button">Szene neu starten</button>
+  </div>
   <div class="controls">
     <label>Tempo <input id="speed" type="range" min="0.25" max="2" step="0.05" value="1"><output id="speed-value">1.00×</output></label>
     <button id="spawn" type="button">Marine spawnen</button>
@@ -32,15 +40,16 @@
     <button id="reset" type="button">Kamera zurücksetzen</button>
     <button id="focus" type="button">Crowd zentrieren</button>
   </div>
-  <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt alle Marines zum Ziel"></canvas>
+  <canvas id="scene" role="img" aria-label="Interaktives 3D-Spielfeld: Klicken oder Tippen bewegt die aktive Marine-Gruppe zum Ziel"></canvas>
   <p id="metrics" aria-label="Technische Messwerte"></p>
-  <p id="status" role="status">Klick auf das Spielfeld setzt das gemeinsame Ziel.</p>
-  <small>Klick / Tippen: alle Marines zum Ziel bewegen · Ziehen: Kamera drehen / neigen · Mitteltaste oder Umschalt + Ziehen: Karte verschieben · Mausrad: zoomen.<br>Das Zielkreuz zeigt den gemeinsamen Treffpunkt. Unterwegs laufen die Marines, am Ziel wechseln sie automatisch zu Idle. Die Körper bleiben aufrecht, die Füße passen sich dem Hang an. Am Ziel verteilen sich die Marines auf getrennte Standplätze. Klicks auf Felsblöcke oder unbegehbare Hänge werden abgewiesen. Ein neuer Klick ersetzt den bisherigen Befehl.</small>
+  <p id="status" role="status">Klick auf das Spielfeld setzt das Ziel der aktiven Gruppe.</p>
+  <small>Klick / Tippen: aktive Gruppe bewegen · Ziehen: Kamera drehen / neigen · Mitteltaste oder Umschalt + Ziehen: Karte verschieben · Mausrad: zoomen.<br>Die Zielkreuze gehören zu den jeweiligen Gruppen. Halt gibt Reservierungen frei und hält die aktuellen Positionen. Gegnerkontakt ist kein Erreichen des Laufziels: Marines bleiben stehen, blicken zum Gegner und geben ihren Standplatz frei. Ein neuer Befehl vom Gegner weg erlaubt Rückzug; nach Ende des Kontakts wird ein noch aktiver Laufbefehl fortgesetzt. „Szene neu starten“ ersetzt beide Gruppen, auch während der Pause. Hindernisse, Körpergröße, Fuß-IK und begehbares Gelände bleiben unverändert.</small>
   <script src="marine-model.js"></script>
   <script src="crowd-terrain.js"></script>
   <script src="crowd-navigation.js"></script>
   <script src="crowd-recovery.js"></script>
   <script src="crowd-core.js"></script>
+  <script src="crowd-scenarios.js"></script>
   <script src="marine-instances.js"></script>
   <script src="marine-view.js"></script>
 </body>

@@ -103,10 +103,10 @@ try {
     await page.mouse.click(pixel.x, pixel.y);
   }
   await clickPoint(-4.5, -2.5);
-  assert.ok(await page.evaluate(() => world.destination && Math.hypot(world.destination.x + 4.5, world.destination.z + 2.5) < 0.03));
-  const command = await page.evaluate(() => JSON.stringify({ destination: world.destination, slots: world.slots, units: world.marines }));
+  assert.ok(await page.evaluate(() => world.groups[0].destination && Math.hypot(world.groups[0].destination.x + 4.5, world.groups[0].destination.z + 2.5) < 0.03));
+  const command = await page.evaluate(() => JSON.stringify({ destination: world.groups[0].destination, slots: [...world.groups[0].reservedSlots], units: world.marines }));
   await clickPoint(2.5, 0, true);
-  assert.equal(await page.evaluate(() => JSON.stringify({ destination: world.destination, slots: world.slots, units: world.marines })), command);
+  assert.equal(await page.evaluate(() => JSON.stringify({ destination: world.groups[0].destination, slots: [...world.groups[0].reservedSlots], units: world.marines })), command);
   assert.ok(await page.evaluate(() => Boolean(world.notice)), 'native top-face click rejects the visible obstacle');
   const beforePan = await page.evaluate(() => ({ state: JSON.stringify(world.marines), frame: window.frames }));
   const canvas = await page.locator('canvas').boundingBox();
@@ -130,20 +130,46 @@ try {
     const core = CrowdSimulation, nav = CrowdNavigation, goal = { x: 0, z: 7 };
     if (!core.moveTo(world, goal)) throw new Error('Central browser command rejected');
     const hidden = world.marines.filter(m => !nav.canTravel(goal.x, goal.z, m.target.x, m.target.z));
-    const m = hidden[0], field = world.field, target = m.target;
+    const m = hidden[0], field = world.groups[0].field, target = m.target;
     world.marines = [m]; m.x = goal.x; m.z = goal.z; m.y = CrowdTerrain.heightAt(m.x, m.z);
     Object.assign(m.previous, { x: m.x, z: m.z });
     const before = world.stats.recoveryAttempts;
     let tick = 0;
     for (; tick < 1800; tick++) { core.update(world, 1 / 60); if (!m.moving && m.runWeight < 0.001) break; }
     return { hidden: hidden.length, arrived: tick < 1800 && m.x === target.x && m.z === target.z,
-      unchanged: world.field === field && m.target === target, fields: world.stats.fieldBuilds,
+      unchanged: world.groups[0].field === field && m.target === target, fields: world.stats.fieldBuilds,
       recovery: world.stats.recoveryAttempts - before };
   });
   assert.ok(arrival.hidden > 100); assert.equal(arrival.arrived, true); assert.equal(arrival.unchanged, true);
   assert.equal(arrival.fields, 2); assert.equal(arrival.recovery, 0);
   await page.click('#focus');
   await page.waitForFunction(() => window.drawCount === CrowdNavigation.obstacles.length + 2 + MarineModel.parts.length);
+  await page.selectOption('#scenario', 'contact'); await page.fill('#scenario-count', '16');
+  await page.click('#scenario-start');
+  assert.equal(await page.textContent('#unit-count'), '32'); assert.equal(await page.isChecked('#hostile'), true);
+  await page.waitForFunction(() => window.drawCount === 9 + 4 + 32 * MarineModel.parts.length);
+  const colors = await page.evaluate(() => {
+    const offset = (13 + 16 * MarineModel.parts.length + MarineModel.parts.findIndex(p => p.name === 'chest')) * MarineInstances.stride + 16;
+    return window.instanceData.slice(offset, offset + 3);
+  });
+  assert.ok(colors.every((c, i) => Math.abs(c - [0.65, 0.28, 0.18][i]) < 1e-6), 'group B has its own actual uploaded armor palette');
+  const untouched = await page.evaluate(() => JSON.stringify(world.marines.filter(m => m.group === 0)));
+  await page.selectOption('#active-group', '1'); await clickPoint(10, -6);
+  assert.equal(await page.evaluate(() => JSON.stringify(world.marines.filter(m => m.group === 0))), untouched);
+  assert.ok(await page.evaluate(() => Math.hypot(world.groups[1].destination.x - 10, world.groups[1].destination.z + 6) < 0.03));
+  await page.click('#hold'); assert.equal(await page.evaluate(() => world.groups[1].reservedSlots.size), 0);
+  assert.ok(await page.evaluate(() => world.marines.filter(m => m.group === 1).every(m => m.state === 'holding' && m.target === null)));
+  await page.click('#spawn'); assert.equal(await page.textContent('#unit-count'), '33');
+  assert.equal(await page.evaluate(() => world.marines.at(-1).group), 1);
+  assert.equal(await page.evaluate(() => world.marines.at(-1).state), 'holding');
+  await page.uncheck('#hostile'); assert.equal(await page.evaluate(() => world.groups[1].team), 0);
+  const freeze = await page.evaluate(() => ({ state: JSON.stringify(world.marines), uploads: window.uploads, frame: window.frames }));
+  await page.waitForFunction(n => window.frames > n + 3, freeze.frame);
+  // One pending UI-driven upload is allowed before the held scene cache settles.
+  const uploads = await page.evaluate(() => window.uploads);
+  await page.waitForFunction(n => window.frames > n + 6, freeze.frame);
+  assert.equal(await page.evaluate(() => JSON.stringify(world.marines)), freeze.state);
+  assert.equal(await page.evaluate(() => window.uploads), uploads);
   const glError = await page.evaluate(() => window.gl.getError()); assert.equal(glError, 0); assert.deepEqual(errors, []);
-  console.log('Browser file://: real instanced GPU buffers/attributes, interpolation, terrain feet, pause cache, focus/pan/zoom, native goal/blocked picking, 1000-unit batch inheritance/culling, occluded reservation arrival without recovery and shader/GL errors checked.');
+  console.log('Browser file://: actual GPU instances/attributes/palettes, interpolation, terrain feet, pause cache, camera/picking, 1000-unit batch, occluded arrival, independent group commands, hold/spawn/team controls and shader/GL errors checked.');
 } finally { await browser.close(); }

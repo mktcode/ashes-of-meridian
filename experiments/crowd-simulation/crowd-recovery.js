@@ -5,7 +5,7 @@ const CrowdRecovery = (() => {
   const nav = CrowdNavigation, step = 0.05, radius = 6, side = Math.round(radius * 2 / step) + 1;
   const bodyRadius = nav.radius * 2 + 0.02, states = new WeakMap(), expansionBudget = 8192, cacheLimit = 8;
   function snapshot(world, marine) {
-    return world.marines.filter(m => m !== marine && (!m.moving || m.yieldUntil > world.time)).map(m => ({ unit: m, x: m.x, z: m.z }));
+    return world.marines.filter(m => m !== marine && (!m.moving || m.waitingForRoute || m.yieldUntil > world.time)).map(m => ({ unit: m, x: m.x, z: m.z }));
   }
   function same(a, b) {
     return a.length === b.length && a.every((p, i) => p.unit === b[i].unit && p.x === b[i].x && p.z === b[i].z);
@@ -21,14 +21,14 @@ const CrowdRecovery = (() => {
     }
     return true;
   }
-  function createField(world, center, goal, parked, target) {
+  function createField(group, center, goal, parked, target) {
     const ox = center.x - radius, oz = center.z - radius, count = side * side;
     const blocked = new Uint8Array(count), cost = new Float64Array(count).fill(Infinity), next = new Int32Array(count).fill(-1);
     const closed = new Uint8Array(count), heapIndex = [], heapCost = [];
     const point = i => ({ x: ox + (i % side) * step, z: oz + Math.floor(i / side) * step });
     for (let i = 0; i < count; i++) {
       const p = point(i);
-      blocked[i] = !nav.canStand(p.x, p.z) || !Number.isFinite(world.field.cost[nav.indexAt(p.x, p.z)]) ? 1 : 0;
+      blocked[i] = !nav.canStand(p.x, p.z) || !Number.isFinite(group.field.cost[nav.indexAt(p.x, p.z)]) ? 1 : 0;
     }
     const nearby = parked.filter(p => Math.abs(p.x - center.x) <= radius + bodyRadius && Math.abs(p.z - center.z) <= radius + bodyRadius);
     for (const p of nearby) {
@@ -62,7 +62,7 @@ const CrowdRecovery = (() => {
       }
       return { index, value };
     }
-    const potential = p => nav.travelDistance(world.field, target, p.x, p.z);
+    const potential = p => nav.travelDistance(group.field, target, p.x, p.z);
     if (goal) {
       const i = Math.round((goal.z - oz) / step) * side + Math.round((goal.x - ox) / step);
       if (!blocked[i]) { cost[i] = 0; push(i, 0); }
@@ -77,11 +77,12 @@ const CrowdRecovery = (() => {
     return { ox, oz, blocked, cost, next, closed, heapIndex, point, nearby, push, pop, goal, potential };
   }
   function plan(world, marine, target = marine.target) {
-    nav.prepareTarget(world.field, target);
+    const group = world.groups[marine.group];
+    nav.prepareTarget(group.field, target);
     const now = world.time, parked = snapshot(world, marine);
-    let state = states.get(world);
-    if (!state || state.command !== world.slotPool) {
-      state = { command: world.slotPool, fields: new Map() }; states.set(world, state);
+    let state = states.get(group);
+    if (!state || state.command !== group.slotPool) {
+      state = { command: group.slotPool, fields: new Map() }; states.set(group, state);
     }
     const close = Math.hypot(target.x - marine.x, target.z - marine.z) <= radius - 0.5;
     const center = close ? target : { x: Math.round(marine.x / 4) * 4, z: Math.round(marine.z / 4) * 4 };
@@ -95,7 +96,7 @@ const CrowdRecovery = (() => {
     }
     if (!field) {
       if (state.fields.size >= cacheLimit) state.fields.delete(state.fields.keys().next().value);
-      field = createField(world, center, final ? target : null, nearby, target); field.refreshed = now;
+      field = createField(group, center, final ? target : null, nearby, target); field.refreshed = now;
       state.fields.set(key, field); world.stats.recoveryFields++;
     } else { state.fields.delete(key); state.fields.set(key, field); }
     function blockedResult() {

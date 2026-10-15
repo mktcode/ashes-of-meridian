@@ -119,6 +119,19 @@
     const box = (transform, center, size, color) => instances.box(transform, center, size, color);
 
     const world = CrowdSimulation.createWorld();
+    CrowdSimulation.createGroup(world, 0, { x: 24, z: -6 });
+    const groupColors = [[0.32, 0.43, 0.29], [0.65, 0.28, 0.18]];
+    const activeGroup = document.getElementById('active-group'), hostile = document.getElementById('hostile');
+    const selectedGroup = () => Number(activeGroup.value);
+    const showCount = () => { document.getElementById('unit-count').textContent = String(world.marines.length); };
+    document.getElementById('hold').addEventListener('click', () => { CrowdSimulation.hold(world, selectedGroup()); world.notice = ''; });
+    hostile.addEventListener('change', () => { CrowdSimulation.setTeam(world, 1, hostile.checked ? 1 : 0); });
+    document.getElementById('scenario-start').addEventListener('click', () => {
+      const kind = document.getElementById('scenario').value, count = Number(document.getElementById('scenario-count').value);
+      if (!CrowdScenarios.load(world, kind, count)) { world.notice = 'Szene braucht 1 bis 500 Marines je Gruppe und ausreichend freie Plätze.'; return; }
+      activeGroup.value = '0'; hostile.checked = world.groups[1].team !== world.groups[0].team; showCount();
+      document.getElementById('focus').click();
+    });
     let yaw = 0.55, pitch = 0.90, zoom = 1, focus = null;
     let paused = false, previous = null;
     const speed = document.getElementById('speed');
@@ -126,9 +139,9 @@
     speed.addEventListener('input', () => { document.getElementById('speed-value').textContent = `${Number(speed.value).toFixed(2)}×`; });
     function spawnMarines(count) {
       world.notice = '';
-      const added = CrowdSimulation.spawnMarines(world, count);
+      const added = CrowdSimulation.spawnMarines(world, count, selectedGroup());
       if (added.length < count) world.notice = 'Kein freier Spawn- oder Standplatz mehr vorhanden.';
-      document.getElementById('unit-count').textContent = String(world.marines.length);
+      showCount();
     }
     document.getElementById('spawn').addEventListener('click', () => spawnMarines(1));
     document.getElementById('spawn-ten').addEventListener('click', () => spawnMarines(10));
@@ -161,7 +174,7 @@
       if (Math.abs(x) > 1 || Math.abs(y) > 1) return;
       const camera = CrowdSimulation.cameraFrame(yaw, pitch, zoom, canvas.clientWidth, canvas.clientHeight, focus);
       const point = CrowdSimulation.groundPoint(x, y, camera);
-      if (point) world.notice = CrowdSimulation.moveTo(world, point) ? '' : 'Dieses Ziel ist gesperrt, nicht erreichbar oder bietet zu wenig Platz.';
+      if (point) world.notice = CrowdSimulation.moveTo(world, point, selectedGroup()) ? '' : 'Dieses Ziel ist gesperrt, nicht erreichbar oder bietet zu wenig Platz.';
     }
     let drag = null;
     canvas.addEventListener('contextmenu', event => event.preventDefault());
@@ -207,7 +220,7 @@
     document.addEventListener('visibilitychange', () => { previous = null; });
 
     const metrics = document.getElementById('metrics');
-    let lastView = '', lastSteps = -1, lastAccumulator = -1, lastUnits = null, lastCount = -1, lastDestination = null;
+    let lastView = '', lastSteps = -1, lastAccumulator = -1, lastUnits = null, lastCount = -1, lastRevision = -1;
     let samples = 0, simulationMs = 0, renderingMs = 0, measuredAt = 0, visibleCount = 0;
     function frame(now) {
       if (gl.isContextLost()) return;
@@ -217,10 +230,11 @@
       if (!paused) CrowdSimulation.update(world, dt * Number(speed.value));
       simulationMs += performance.now() - simulationStart;
       const renderStart = performance.now();
-      const moving = world.marines.some(marine => marine.moving);
-      const message = world.notice || (paused ? 'Pausiert' : world.destination
-        ? `${moving ? 'Marines folgen dem Flow Field' : 'Alle Marines am Ziel · Idle'} (${world.destination.x.toFixed(1)}, ${world.destination.z.toFixed(1)})`
-        : 'Klick auf das Spielfeld setzt das gemeinsame Ziel.');
+      const group = world.groups[selectedGroup()], members = world.marines.filter(m => m.group === group.id);
+      const contacts = members.filter(m => m.state === 'contact').length;
+      const pending = members.filter(m => m.state === 'moving' || m.state === 'waiting').length;
+      const message = world.notice || (paused ? 'Pausiert' : `Gruppe ${group.id === 0 ? 'A' : 'B'} · ${members.length} Marines · ${contacts} im Kontakt · ${pending} unterwegs · `
+        + (group.order === 'hold' ? 'Halt' : group.destination ? `Ziel (${group.destination.x.toFixed(1)}, ${group.destination.z.toFixed(1)})` : 'Klick setzt das Gruppenziel.'));
       if (status.textContent !== message) status.textContent = message;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr)), h = Math.max(1, Math.round(canvas.clientHeight * dpr));
@@ -242,16 +256,16 @@
       gl.uniform1i(uniforms.instanced, 1);
       const view = `${yaw}:${pitch}:${zoom}:${w}:${h}:${focus?.x}:${focus?.z}`;
       const dirty = world.stats.steps !== lastSteps || world.accumulator !== lastAccumulator || world.marines !== lastUnits
-        || world.marines.length !== lastCount || world.destination !== lastDestination || view !== lastView;
+        || world.marines.length !== lastCount || world.revision !== lastRevision || view !== lastView;
       if (dirty) {
-        instances.begin(world.marines.length * MarineModel.parts.length + CrowdNavigation.obstacles.length + (world.destination ? 2 : 0));
+        instances.begin(world.marines.length * MarineModel.parts.length + CrowdNavigation.obstacles.length + world.groups.filter(g => g.destination).length * 2);
         for (const obstacle of CrowdNavigation.obstacles) {
           const root = translate([obstacle.x, obstacle.baseY, obstacle.z]);
           box(root, [0, obstacle.height / 2, 0], [obstacle.width, obstacle.height, obstacle.depth], [0.44, 0.40, 0.34]);
         }
-        if (world.destination) {
-          const { x, z } = world.destination;
-          const color = moving ? [0.90, 0.68, 0.28] : [0.45, 0.76, 0.48];
+        for (const g of world.groups) if (g.destination) {
+          const { x, z } = g.destination;
+          const color = groupColors[g.id % groupColors.length];
           const marker = CrowdTerrain.transform(x, z, CrowdTerrain.heightAt(x, z) + 0.035, 0);
           box(marker, [0, 0, 0], [0.65, 0.02, 0.07], color);
           box(marker, [0, 0, 0], [0.07, 0.02, 0.65], color);
@@ -259,7 +273,7 @@
         visibleCount = 0;
         for (const unit of world.marines) {
           const marine = CrowdSimulation.renderMarine(world, unit);
-          if (MarineInstances.visible(marine, camera)) { instances.marine(marine); visibleCount++; }
+          if (MarineInstances.visible(marine, camera)) { instances.marine(marine, null, unit.group === 0 ? null : groupColors[unit.group % groupColors.length]); visibleCount++; }
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, instanceBuffer);
         if (instanceBytes !== instances.data.byteLength) {
@@ -268,14 +282,14 @@
         }
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, instances.data.subarray(0, instances.count * MarineInstances.stride));
         lastSteps = world.stats.steps; lastAccumulator = world.accumulator; lastUnits = world.marines;
-        lastCount = world.marines.length; lastDestination = world.destination; lastView = view;
+        lastCount = world.marines.length; lastRevision = world.revision; lastView = view;
       }
       gl.drawArraysInstanced(gl.TRIANGLES, 0, 36, instances.count);
       renderingMs += performance.now() - renderStart; samples++;
       if (now - measuredAt >= 500) {
         const pending = world.marines.filter(m => m.moving).length;
         const waiting = world.marines.filter(m => m.moving && m.stalledFor > 2).length;
-        metrics.textContent = `CPU Ø: Simulation ${(simulationMs / samples).toFixed(2)} ms · Render-Submission ${(renderingMs / samples).toFixed(2)} ms (kein GPU-/FPS-Test) · 2 Draws · ${visibleCount} sichtbar · ${pending} unterwegs / ${waiting} warten · ${world.stats.recoveryAttempts} Umwegversuche / ${world.stats.retargets} Ausweichplätze`;
+        metrics.textContent = `CPU Ø: Simulation ${(simulationMs / samples).toFixed(2)} ms · Render-Submission ${(renderingMs / samples).toFixed(2)} ms (kein GPU-/FPS-Test) · 2 Draws · ${visibleCount} sichtbar · ${pending} unterwegs / ${waiting} warten · ${world.marines.filter(m => m.state === 'contact').length} im Kontakt · ${world.stats.fieldBuilds} Hauptfelder · ${world.stats.recoveryAttempts} Umwegversuche / ${world.stats.retargets} Ausweichplätze`;
         measuredAt = now; simulationMs = renderingMs = samples = 0;
       }
       requestAnimationFrame(frame);

@@ -41,17 +41,17 @@ function validate(world, parked) {
     }
   }
   assert.equal(new Set(world.marines.map(m => m.target)).size, world.marines.length);
-  assert.equal(world.reservedSlots.size, world.marines.length);
+  assert.equal(world.groups[0].reservedSlots.size, world.marines.length);
 }
 function settle(world, goal, seconds, label) {
   assert.ok(core.moveTo(world, goal), `${label}: command accepted at actual crowd size`);
-  const field = world.field, rows = new Map(world.marines.map(m => [m, m.target.row])), costs = [];
+  const field = world.groups[0].field, rows = new Map(world.marines.map(m => [m, m.target.row])), costs = [];
   const parked = new Map(world.marines.filter(m => !m.moving && m.x === m.target.x && m.z === m.target.z)
     .map(m => [m, { x: m.x, z: m.z, target: m.target }]));
   let tick = 0, peakNeighbours = 0;
   for (; tick < seconds * 60; tick++) {
     const start = performance.now(); core.update(world, 1 / 60); costs.push(performance.now() - start);
-    assert.equal(world.field, field, 'recovery does not rebuild the primary field');
+    assert.equal(world.groups[0].field, field, 'recovery does not rebuild the primary field');
     peakNeighbours = Math.max(peakNeighbours, world.stats.neighbourChecks);
     for (const m of world.marines) assert.equal(m.target.row, rows.get(m), 'all rescue paths and spare reservations retain arrival rows');
     if (tick % 15 === 0) validate(world, parked);
@@ -74,9 +74,9 @@ for (const [count, goal, seconds] of [[100, { x: -32, z: 32 }, 100], [500, { x: 
   assert.equal(world.stats.fieldBuilds, 1);
   if (count === 1000) {
     const frozen = JSON.stringify(world.marines); core.update(world, 0); assert.equal(JSON.stringify(world.marines), frozen);
-    const oldField = world.field, oldTargets = world.marines.map(m => m.target);
+    const oldField = world.groups[0].field, oldTargets = world.marines.map(m => m.target);
     assert.equal(core.spawnMarines(world, 10).length, 10);
-    assert.equal(world.field, oldField);
+    assert.equal(world.groups[0].field, oldField);
     for (let i = 0; i < oldTargets.length; i++) assert.equal(world.marines[i].target, oldTargets[i]);
     // Branch the fixture: test filled-formation access without weakening the in-flight redirect case.
     const late = structuredClone(world);
@@ -88,7 +88,7 @@ for (const [count, goal, seconds] of [[100, { x: -32, z: 32 }, 100], [500, { x: 
 }
 const central = core.createWorld(); assert.equal(core.spawnMarines(central, 1999).length, 1999);
 settle(central, { x: 0, z: 7 }, 180, '2000-central-occluded-arrival');
-const hidden = central.marines.filter(m => !nav.canTravel(central.destination.x, central.destination.z, m.target.x, m.target.z));
+const hidden = central.marines.filter(m => !nav.canTravel(central.groups[0].destination.x, central.groups[0].destination.z, m.target.x, m.target.z));
 assert.ok(hidden.length > 200, 'the central crowd actually occupies reachable obstacle shadows');
 assert.equal(central.stats.fieldBuilds, 1);
 console.log(`Scale: actual 100/500/1000/2000 arrivals, 1010-unit late arrival and redirect, ${hidden.length} occluded reservations in the central 2000-unit crowd, local work, terrain, separation, immutable parked bodies, rows, pause and batch/late-spawn semantics checked. CPU timings are not GPU/FPS guarantees.`);
