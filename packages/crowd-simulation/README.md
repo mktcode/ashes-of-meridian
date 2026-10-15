@@ -96,8 +96,11 @@ sind die maßgeblichen API-Signaturen.
   Suchzähler sind Arbeitsnachweise, keine Millisekunden- oder FPS-Garantien.
 
 Größere Körper erhalten echte Navigations- und Interaktionsfreiheit. Neue
-Parkformationen berücksichtigen die größte bereits vorhandene Körperklasse;
-später hinzugefügte größere Körper verschieben keine alten engen Formationen.
+Parkformationen berücksichtigen die größte bereits vorhandene Körperklasse.
+Kleine Körper stehen dabei in kompakten Inseln; gezielte sich kreuzende Gassen
+halten große Körper passierfähig, statt jede Nachbarlücke auf deren Größe aufzuweiten.
+Die Freistellung an Wänden und zwischen unabhängigen Gruppen bleibt konservativ.
+Später hinzugefügte größere Körper verschieben keine alten engen Formationen.
 Beliebige Blockaden lösen sich nicht garantiert: feste Gruppen müssen gegebenenfalls
 Platz machen. Lokale Recovery ist begrenzt, kein ORCA und kein globaler Deadlock-Beweis.
 
@@ -160,7 +163,10 @@ globalen Spawn-/Formationssuche aufwendig sein.
 
 `npm run test:crowd` baut und prüft den TypeScript-Verbraucher, öffentliche Verträge,
 Entfernung bei laufender Recovery und exakte Vergleiche mit vor der Extraktion
-aufgezeichneten Szenen sowie Interpolation und Instanzposen. Synthetische Höhenfelder
+aufgezeichneten unveränderten Einzelgrößen-Szenen sowie Interpolation und Instanzposen.
+Die bewusst geänderten Mischformationen verwenden keine neu erzeugten historischen
+Referenzen: Solver/Fassade werden weiterhin verglichen, Kompaktheit, reale Gassenbreite
+und vollständige Ankunft werden unabhängig geprüft. Synthetische Höhenfelder
 prüfen beide Zeilenrichtungen/Diagonalen gegen ein unabhängiges Dreiecksmesh;
 rechteckige 2-m-Karten prüfen Körperfreiheit, Gegenverkehr, vollständige Ankunft,
 Kontakt/Rückzug und reine Renderinterpolation. Es werden keine Daten oder Module
@@ -173,7 +179,10 @@ vollständige Marine-Ankünfte bis 2.000; `check-contact.mjs` Gruppenverkehr/Kon
 `check-tank.mjs --scale` ergänzt 500 Marines und 63 Panzer. Diese umfangreicheren
 Fälle sind nicht Teil des kurzen Standard-Packagechecks.
 `check-package-scale.mjs` prüft zusätzlich über die tatsächlich gebaute öffentliche
-API vollständige Ankünfte von 2.000 Marines und 500 Marines mit 63 Panzern.
+API vollständige Ankünfte von 2.000 Marines, 500 Marines mit 63 Panzern und
+1.000 Marines um vier fest stehende Panzer. `check-formation.mjs` schützt kompakte
+Nachbarabstände, echte Panzerfreiheit in beiden Gassenrichtungen, gedrehte Formationen,
+späte Spawns beider Körperklassen und unveränderte geparkte Positionen.
 `node packages/crowd-simulation/tests/check-rectangular.mjs --scale` ergänzt einen
 synthetischen 128 × 192-m-Fall mit 2.000 kleinen Körpern sowie einen 320 × 480-m-Fall
 mit 500 kleinen und 63 großen Körpern, beide im 2-m-Raster mit Hindernisumweg;

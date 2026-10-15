@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "test": "tsc -p tests/tsconfig.json && node tests/check-api.mjs && node tests/check-heightfield.mjs && node tests/check-rectangular.mjs && node tests/check-lifecycle.mjs && node tests/check-parity.mjs && node tests/check-smoothing.mjs && node tests/check-instances.mjs",
+    "test": "tsc -p tests/tsconfig.json && node tests/check-api.mjs && node tests/check-heightfield.mjs && node tests/check-rectangular.mjs && node tests/check-formation.mjs && node tests/check-lifecycle.mjs && node tests/check-parity.mjs && node tests/check-smoothing.mjs && node tests/check-instances.mjs",
     "test:browser": "node tests/check-browser.mjs"
   }
 }

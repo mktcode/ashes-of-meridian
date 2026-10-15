@@ -158,11 +158,18 @@ export function createNavigation(surface, obstacles, profiles, cellSize = surfac
     return distance;
   }
   function places(point, limit, field = null, direction = null, passage = null) {
-    // Both body-to-body lanes and wall clearance must fit the largest participating class.
     const passageRadius = passage?.radius || radius, canPass = passage?.canStand || canStand;
-    const candidates = [], spacing = radius * 2 + Math.max(radius, passageRadius) * 2 + 0.15, rings = Math.ceil(Math.max(width, depth) * 2 / spacing);
+    const laneSpacing = radius * 2 + Math.max(radius, passageRadius) * 2 + 0.15;
+    // Small bodies park in compact islands, with crossing aisles for much larger bodies.
+    // Three-column/row bands limit detours instead of creating a crowd-wide wall of parked bodies.
+    const islands = passageRadius > radius * 2, spacing = islands ? parkingSpacing : laneSpacing;
+    const rowSpacing = spacing * Math.sqrt(3) / 2;
+    const widen = (value, pitch, gap) => value + Math.floor(value / pitch + 0.5) * gap;
+    const candidates = [], rings = Math.ceil(Math.max(width, depth) * 2 / spacing);
     for (let q = -rings; q <= rings; q++) for (let r = -rings; r <= rings; r++) {
-      const dx = spacing * (q + r / 2), dz = spacing * Math.sqrt(3) / 2 * r;
+      const rawX = spacing * (q + r / 2), rawZ = rowSpacing * r;
+      const dx = islands ? widen(rawX, spacing * 3, laneSpacing - spacing / 2) : rawX;
+      const dz = islands ? widen(rawZ, rowSpacing * 3, laneSpacing - rowSpacing) : rawZ;
       const x = point.x + (direction ? direction.x * dx - direction.z * dz : dx);
       const z = point.z + (direction ? direction.z * dx + direction.x * dz : dz);
       if (!canStand(x, z) || field && !Number.isFinite(field.cost[indexAt(x, z)])) continue;

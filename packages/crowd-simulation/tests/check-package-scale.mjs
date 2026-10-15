@@ -14,10 +14,20 @@ assert.equal(mass.spawn(group, 2000).agents.length, 2000);
 assert.ok(mass.command({ kind: 'move', group, destination: { x: 0, z: 7 } }).ok);
 const mixed = demoScenarios.create(navigation, 'mixed', 500);
 assert.equal(mixed.size, 563);
-for (const [label, crowd, fields] of [
-  ['public-2000-obstacle-shadow-arrival', mass, 1],
-  ['public-500-marines-63-tanks', mixed, 2],
+const standing = createCrowd({ navigation });
+const large = standing.createGroup({ profile: 'tank', team: 0, spawnOrigin: { x: 8, z: -6 } });
+const held = standing.spawn(large, 4).agents;
+assert.equal(held.length, 4);
+assert.ok(standing.command({ kind: 'hold', group: large }).ok);
+const small = standing.createGroup({ profile: 'marine', team: 0, spawnOrigin: { x: -16, z: -6 } });
+assert.equal(standing.spawn(small, 1000).agents.length, 1000);
+assert.ok(standing.command({ kind: 'move', group: small, destination: { x: 24, z: -6 } }).ok);
+for (const [label, crowd, fields, heldIds] of [
+  ['public-2000-obstacle-shadow-arrival', mass, 1, []],
+  ['public-500-marines-63-tanks', mixed, 2, []],
+  ['public-1000-marines-four-held-tanks', standing, 1, held],
 ]) {
+  const holding = new Set(heldIds);
   const count = crowd.size,
     frame = createCrowdFrameBuffer(),
     parked = new Map();
@@ -37,11 +47,12 @@ for (const [label, crowd, fields] of [
       assert.equal(frame.positions[i * 3 + 1], terrain.heightAt(x, z));
       if (parked.has(id))
         assert.deepEqual([x, z], parked.get(id), 'actual parked positions remain fixed');
-      if (frame.states[i] !== AgentState.Arrived || frame.movementBlend[i] >= 0.001) {
+      const expectedState = holding.has(id) ? AgentState.Holding : AgentState.Arrived;
+      if (frame.states[i] !== expectedState || frame.movementBlend[i] >= 0.001) {
         finished = false;
         continue;
       }
-      assert.equal(crowd.getAgent(id).state, AgentState.Arrived);
+      assert.equal(crowd.getAgent(id).state, expectedState);
       parked.set(id, [x, z]);
     }
     if (finished) break;
@@ -56,7 +67,7 @@ for (const [label, crowd, fields] of [
     );
   assert.equal(parked.size, count);
   assert.equal(crowd.getStats().fieldBuilds, fields);
-  assert.equal(crowd.getStats().reservations, count);
+  assert.equal(crowd.getStats().reservations, count - holding.size);
   assert.ok(peakNeighbours < count * 256);
   console.log(
     JSON.stringify({
@@ -64,6 +75,8 @@ for (const [label, crowd, fields] of [
       count,
       tick: crowd.tick,
       parked: parked.size,
+      arrived: count - holding.size,
+      held: holding.size,
       fields,
       peakNeighbours,
     }),

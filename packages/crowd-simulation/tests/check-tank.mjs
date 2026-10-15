@@ -44,7 +44,8 @@ function validate(w, fixed = new Map()) {
   for (const g of w.groups) assert.equal(g.reservedSlots.size, reservations.filter(m => m.group === g.id).length);
   for (let i = 0; i < reservations.length; i++) for (let j = i + 1; j < reservations.length; j++) {
     const a = reservations[i], b = reservations[j];
-    assert.ok(Math.hypot(a.target.x - b.target.x, a.target.z - b.target.z) >= a.radius + b.radius + passageRadius * 2 + 0.15 - 1e-8, 'size-aware parking lanes');
+    const minimum = a.group === b.group ? a.radius * 4 + 0.15 : a.radius + b.radius + passageRadius * 2 + 0.15;
+    assert.ok(Math.hypot(a.target.x - b.target.x, a.target.z - b.target.z) >= minimum - 1e-8, 'compact same-group slots and conservative inter-group passage buffers');
   }
 }
 function settle(w, seconds, label) {
