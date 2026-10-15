@@ -14,6 +14,8 @@ Issue; abgeschlossene Änderungen in Git. Menschliche Abnahme ist nicht durch te
 
 ## Architekturvorhaben
 
+- [Crowd-Parkformationen](crowd-ankunftsabstaende.md): kompaktere Ankunft kleiner Körper,
+  ohne notwendige Durchgänge und vollständige Ankünfte zu verlieren.
 - [Landschaftslabor als Package und Crowd-Anbindung](landschaftslabor-package-und-crowd-integration.md):
   gemeinsame Oberfläche, Offline-Auslieferung und profilbezogene Weggarantie vor der Spielintegration klären.
 
