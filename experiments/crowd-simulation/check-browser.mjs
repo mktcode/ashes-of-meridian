@@ -41,6 +41,11 @@ try {
   await page.waitForFunction(() => window.world && window.instanceData && window.frames >= 2);
   await page.click('#pause');
   assert.equal(await page.getAttribute('#pause', 'aria-pressed'), 'true');
+  await page.locator('#speed').fill('5');
+  assert.equal(await page.inputValue('#speed'), '5');
+  assert.equal(await page.textContent('#speed-value'), '5.00×');
+  await page.locator('#speed').fill('1');
+  assert.equal(await page.textContent('#speed-value'), '1.00×');
   const initial = await page.evaluate(() => {
     const m = CrowdSimulation.createMarine(-3, -2);
     Object.assign(m, { yaw: 0.4, time: 1.4, runWeight: 0.7 });
