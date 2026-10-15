@@ -28,6 +28,12 @@ beider tatsächlichen Zelldreiecke. Der CPU-Kern ist unabhängig von DOM/WebGL;
 eine typisierte Fassade sowie Node- und klassische Browser-Bundles sind vorhanden.
 Weder STRATA noch das eigentliche Spiel sind an diese Crowd angebunden.
 
+Die vorhandenen [Crowd-Prüfungen](../../packages/crowd-simulation/README.md#prüfen-und-messen)
+vergleichen Speicherorientierungen und Diagonalen mit einem unabhängigen Dreiecksmesh.
+Synthetische rechteckige 2-m-Felder prüfen Körperfreiheit, Gegenverkehr, vollständige
+Ankunft, stabile Parkplätze, Kontakt/Rückzug und reine Renderinterpolation.
+Zusätzliche Skalierungsfälle sind vorhanden, verwenden aber ebenfalls keine STRATA-Karten.
+
 Isolierte CPU-/UI-/Exportprüfungen, produktive Shaderprüfung und ein kleiner
 WebGL-Vorschauvertrag belegen noch keine gemeinsame Landschaft/Crowd-Integration.
 Die vollständige Editor-Browserprüfung ist unter dem festen Task-Limit durch
@@ -48,9 +54,10 @@ und Spiel-/Zielgeräteintegration bleiben offen.
   auseinanderhalten. Keine stille Neugenerierung, Höhenreparatur oder doppelte
   Skalierung beim Laden. Das Verhältnis von Runtime-Codebeigaben und künftigem
   Packagebezug entscheiden, ohne zwei unabhängig gepflegte Laufzeiten zu schaffen.
-- [ ] Besitz der Körperpositionen und Simulationszeit beim Spielanschluss eindeutig
-  festlegen. Terrain liefert Geometrie, Crowd Bewegung und profilbezogene Navigation;
-  keine konkurrierende Bewegungssimulation oder zweite Simulationsuhr.
+- [ ] Beim Spielanschluss Crowds bestehenden Positionsbesitz erhalten und Crowd-Schritte
+  über die feste Simulationsuhr des Spiels takten. Terrain liefert Geometrie, Crowd
+  Bewegung und profilbezogene Navigation; keine konkurrierende Positionskorrektur
+  oder zweite Simulationsuhr. Renderinterpolation darf die Simulation nicht verändern.
 
 ## STRATA-Oberfläche auf Crowd abbilden
 
@@ -80,9 +87,15 @@ Es fehlt der konkrete Importadapter, nicht ein neuer generischer Höhenfeldvertr
 - [ ] Süd–Nord-Aufstieg, sämtliche Äste, Rundwege, Kurven und Kreuzungen mit den
   tatsächlichen Marine-/Panzerprofilen prüfen. Konservative Rasterfreistellung
   sowie ausreichende Spawn-, Park- und Ankunftsflächen berücksichtigen.
+- [ ] Die vorhandenen kompakten Kleinkörperinseln mit kreuzenden Panzer-Durchfahrten
+  auf Laborkarten abnehmen, auch bei gedrehten Formationen und späten Spawns.
+  Neue Parkformationen berücksichtigen die größte bereits vorhandene Körperklasse;
+  später hinzukommende größere Körper ordnen bestehende Parkplätze nicht neu.
+  Konservative Wand- und Gruppenabstände bleiben für die nutzbare Fläche relevant.
 - [ ] Statische Durchgängigkeit von vollständiger Gruppenankunft und Gegenverkehr
-  unterscheiden. Reservierte Plätze und freie Durchfahrten auf den importierten
-  Karten belegen; synthetische Crowd-Fälle und Export-Roundtrips ersetzen das nicht.
+  unterscheiden. Vorhandene synthetische Regressionen als Ausgangspunkt verwenden,
+  reservierte Plätze und freie Durchfahrten aber auf tatsächlich importierten Karten
+  belegen. Begrenzte Recovery ist kein allgemeiner Deadlock-Nachweis.
   Dynamische Hindernisse und Kartenänderungen sind keine zugesicherten Crowd-Funktionen.
 
 ## Offline-Auslieferung und Renderanbindung
@@ -107,9 +120,11 @@ Es fehlt der konkrete Importadapter, nicht ein neuer generischer Höhenfeldvertr
 - [ ] Das vorhandene 2-m-Raster als direkten Integrationseinstieg verwenden.
   Crowd koppelt Navigations- und Höhenfeldauflösung; eine feinere Navigation
   ist kein unabhängiger Regler. Die Demo-Auflösung nicht unbesehen übernehmen.
-- [ ] Für repräsentative Laborkarten Speicher und Aufbaukosten pro Körperklasse
-  und Zielfeld sowie die globalen Spawn-/Formationssuchen untersuchen. Ein grobes
-  Gitter begrenzt nicht automatisch die Zahl geometrischer Parkplatzkandidaten.
+- [ ] Die vorhandenen synthetischen Skalierungsfälle für repräsentative importierte
+  Laborkarten ergänzen: Speicher und Aufbaukosten pro Körperklasse und Zielfeld,
+  defensive Höhenkopien sowie globale Spawn-/Formationssuchen untersuchen. Ein grobes
+  Gitter begrenzt nicht automatisch die Zahl geometrischer Parkplatzkandidaten;
+  synthetische Ankunftsfälle sind kein Zielgeräte-Performancebeleg.
   Erst konkrete Kostenbefunde begründen einen Solver-/Suchraumumbau.
 
 ## Integrationsfolge und Abnahme
