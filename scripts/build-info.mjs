@@ -65,19 +65,25 @@ export function sourceFingerprint(root) {
     }
   }
   visit('src');
-  const crowd = 'packages/crowd-simulation';
-  if (existsSync(join(root, crowd))) {
-    visit(`${crowd}/src`);
-    visit(`${crowd}/demo`);
+  for (const name of ['crowd-simulation', 'landscape']) {
+    const workspace = `packages/${name}`;
+    if (!existsSync(join(root, workspace))) continue;
+    visit(`${workspace}/src`);
+    visit(`${workspace}/demo`);
     paths.push(
-      `${crowd}/demo/index.html`,
-      `${crowd}/package.json`,
-      `${crowd}/tsconfig.json`,
-      `${crowd}/build.mjs`,
+      `${workspace}/demo/index.html`,
+      `${workspace}/package.json`,
+      `${workspace}/tsconfig.json`,
+      `${workspace}/build.mjs`,
     );
+    if (name === 'landscape') paths.push(`${workspace}/tests/fixtures/strata-417.zip`);
+  }
+  if (
+    existsSync(join(root, 'packages/crowd-simulation')) ||
+    existsSync(join(root, 'packages/landscape'))
+  )
     for (const manifest of ['package.json', 'package-lock.json'])
       if (existsSync(join(root, manifest))) paths.push(manifest);
-  }
   const hash = createHash('sha256');
   for (const name of paths.sort()) {
     const data = readFileSync(join(root, name));

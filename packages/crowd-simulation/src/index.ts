@@ -89,6 +89,15 @@ export function createNavigationWorld(options: NavigationOptions): NavigationWor
   return handle;
 }
 
+// Read-only query of the solver's actual, conservatively cleared profile grid.
+export function canStand(navigation: NavigationWorld, profile: string, x: number, z: number): boolean {
+  const world = navigations.get(navigation);
+  if (!world) throw new TypeError('Unknown navigation world');
+  const grid = world.forProfile(profile);
+  if (!grid) throw new RangeError('Unknown movement profile');
+  return grid.canStand(x, z);
+}
+
 export function createCrowd(options: {
   navigation: NavigationWorld;
   contactMode?: 'none' | 'hostile-stop';

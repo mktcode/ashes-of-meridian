@@ -42,6 +42,7 @@ Bei Speicherfehlern bleibt Fortschritt nur im Tab; Reload kann ältere Werte lad
 - [Hosting und itch.io](docs/deployment.md), [Kartenbetrachter, Capture und Diagnose](docs/scene-capture.md).
 - [Offene Arbeit](docs/issues/projektfahrplan.md), [Geschichte](docs/story.md) (deutsche interne Fassung).
 - [Crowd-Simulation](packages/crowd-simulation/README.md): unabhängiges CPU-Package mit typisierter API und `file://`-Demo für Marines und Panzer.
+- [STRATA-Terrain/Crowd-Demo](packages/landscape/README.md): Spielkartenimport als eigenes Package; exportierte Laborkarten offline mit Marines und Panzern ausprobieren, ohne Spielintegration.
 - [3D-Planungskarten-Experiment](experiments/planning-map/README.md): unabhängig vom Spiel.
 - [Natürliches Terrain – Höhenfeld-Skizze](experiments/natural-terrain/README.md): erster Noise-basierter Ansatz.
 - [Landschaftsgerüst – Tal, Schlucht & Pass](experiments/landscape-structure/README.md): neuer Entwurf mit geplanten Großformen, Erkundungsrouten und Kamerasteuerung.

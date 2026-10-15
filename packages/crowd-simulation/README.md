@@ -15,6 +15,8 @@ nicht Bestandteile des Bewegungskerns. Die Demo startet nur mit gebautem Bundle.
 `npm run build` erzeugt außerdem die eigenständig mitführbare Demo unter
 `dist/crowd-simulation/demo/index.html`; `npm run build:zip` nimmt sie mit ins Archiv.
 Das eigentliche Spiel benutzt die Crowd noch nicht.
+Die separate [STRATA-Terrain-Demo](../landscape/README.md) lädt exportierte Laborkarten
+über das Landscape-Package und verwendet dieselben Profile und Referenzmodelle.
 
 ## Verbraucher
 
@@ -149,6 +151,11 @@ prüft endliche Punkte einschließlich der Außenkante. Für Abfragen außerhalb
 Steigungsabfragen sind immer Fehler. Clamping erweitert weder Navigation noch
 Spawn-/Zielraum. Die Navigation sperrt konservativ den Rand und benötigt zusätzlichen
 Platz für den Körperradius. Portale außerhalb der Karte sind keine gültigen Befehlsziele.
+
+`canStand(navigation, profile, x, z)` fragt das tatsächliche konservativ freigestellte
+Profilraster ab, ohne Simulation oder Reservierungen zu verändern. Nichtendliche und
+äußere Punkte liefern `false`, unbekannte Navigationswelten/Profile sind Fehler.
+Ein freier Punkt sagt nichts über freie Ankunftsplätze für eine ganze Gruppe aus.
 
 Navigation und Höhenfeld verwenden weiterhin dieselbe Zellenweite. Ein 2-m-Feld
 wird direkt unterstützt, ohne es auf die Demo-Auflösung von 0,5 m umzubauen.

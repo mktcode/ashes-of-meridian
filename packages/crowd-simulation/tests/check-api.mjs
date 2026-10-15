@@ -3,6 +3,7 @@ import * as api from '@aom/crowd-simulation';
 const {
   createHeightfield,
   createNavigationWorld,
+  canStand,
   createCrowd,
   createCrowdFrameBuffer,
   createFixedStepClock,
@@ -56,6 +57,12 @@ assert.ok(
   crowd.command({ kind: 'move', group: a, destination: { x: 2, z: 0 } }).ok,
   'copied profile/obstacle retains infantry clearance',
 );
+assert.equal(canStand(nav, 'infantry', 2, 0), true);
+assert.equal(canStand(nav, 'heavy', 2, 0), false);
+assert.equal(canStand(nav, 'infantry', Infinity, 0), false);
+assert.equal(canStand(nav, 'infantry', 16, 0), false);
+assert.throws(() => canStand({}, 'infantry', 0, 0), TypeError);
+assert.throws(() => canStand(nav, 'unknown', 0, 0), RangeError);
 const before = JSON.stringify([
   crowd.getGroups(),
   crowd.getStats(),

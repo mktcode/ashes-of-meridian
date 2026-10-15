@@ -35,6 +35,14 @@ Skalierungsfälle und Messwerkzeuge stehen im [Package-Einstieg](../packages/cro
 `node packages/crowd-simulation/tests/check-browser.mjs --release` verwendet stattdessen
 die mit `npm run build` erzeugte Auslieferung. Kein Test der Spielanbindung.
 
+## Landscape-Package
+
+`npm run test:landscape` baut Landscape und Crowd und prüft den Typverbrauch,
+Kartenimport, tatsächliche Dreiecksgeometrie/Picking und kleine Gruppen auf einer
+exportierten STRATA-Karte. `npm run check:landscape-browser` prüft die unabhängige
+`file://`-Demo; Details und Grenzen stehen im [Package-Einstieg](../packages/landscape/README.md).
+Kein Spielanschluss und kein Nachweis für alle Generatorparameter oder großen Crowds.
+
 ## Browser
 
 Installiertes Chromium, optional `CHROMIUM_PATH`; kein Download oder gelockerter Dateizugriff.

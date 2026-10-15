@@ -8,7 +8,7 @@ import { writeWorldFrame } from '../src/presentation/frame.js';
 
 export function loadDemo() {
   const context = vm.createContext({ console, Math, Float32Array, Float64Array, Array, Map, Set, Number, Object, MeridianCrowd: api });
-  for (const file of ['marine-model.js', 'crowd-terrain.js', 'obstacles.js', 'camera.js', 'tank-model.js', 'crowd-scenarios.js', 'marine-instances.js']) {
+  for (const file of ['marine-model.js', 'crowd-terrain.js', 'profiles.js', 'obstacles.js', 'camera.js', 'tank-model.js', 'crowd-scenarios.js', 'marine-instances.js']) {
     vm.runInContext(readFileSync(new URL('../demo/' + file, import.meta.url), 'utf8'), context);
   }
   return vm.runInContext('({ terrain: CrowdTerrain, obstacles: CrowdObstacles, profiles: CrowdProfiles, camera: CrowdCamera, model: MarineModel, tank: TankModel, instances: MarineInstances, demoScenarios: CrowdScenarios })', context);

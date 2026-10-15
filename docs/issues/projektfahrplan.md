@@ -15,7 +15,8 @@ Issue; abgeschlossene Änderungen in Git. Menschliche Abnahme ist nicht durch te
 ## Architekturvorhaben
 
 - [Landschaftslabor als Package und Crowd-Anbindung](landschaftslabor-package-und-crowd-integration.md):
-  gemeinsame Oberfläche, Offline-Auslieferung und profilbezogene Weggarantie vor der Spielintegration klären.
+  Terrain/Crowd-Demo abnehmen, weitere Laborbereiche übernehmen und profilbezogene
+  Weggarantie vor dem Spielanschluss klären.
 
 ## Danach: zusammenhängende Abnahme
 

@@ -139,3 +139,32 @@ test('crowd delivery and package sources participate in runtime/source identitie
   writeFileSync(join(packageRoot, 'demo/index.html'), '<title>new demo</title>');
   assert.throws(() => verifyCaptureBuild(root), /stale/);
 });
+
+test('landscape importer, embedded map and demo delivery participate in build identities', async (t) => {
+  const { writeBuildInfo, sourceFingerprint, verifyCaptureBuild } =
+    await import('../scripts/build-info.mjs');
+  const root = fixture(t),
+    workspace = join(root, 'packages/landscape');
+  mkdirSync(join(root, 'src'));
+  writeFileSync(join(root, 'tsconfig.json'), '{}');
+  for (const directory of ['src', 'demo', 'tests/fixtures'])
+    mkdirSync(join(workspace, directory), { recursive: true });
+  for (const file of ['package.json', 'tsconfig.json']) writeFileSync(join(workspace, file), '{}');
+  writeFileSync(join(workspace, 'build.mjs'), '// build');
+  writeFileSync(join(workspace, 'src/index.ts'), 'export const importer = 1;');
+  writeFileSync(join(workspace, 'demo/index.html'), '<!doctype html>');
+  writeFileSync(join(workspace, 'demo/app.js'), '// demo');
+  writeFileSync(join(workspace, 'tests/fixtures/strata-417.zip'), Buffer.from([1, 2, 3]));
+  mkdirSync(join(root, 'dist/landscape/demo'), { recursive: true });
+  writeFileSync(join(root, 'dist/landscape/demo/index.html'), '<!doctype html>');
+  const first = writeBuildInfo(root),
+    source = sourceFingerprint(root);
+  writeFileSync(join(root, 'dist/landscape/demo/index.html'), '<title>terrain</title>');
+  assert.notEqual(writeBuildInfo(root).id, first.id);
+  writeFileSync(join(workspace, 'src/index.ts'), 'export const importer = 2;');
+  assert.notEqual(sourceFingerprint(root), source);
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+  writeBuildInfo(root);
+  writeFileSync(join(workspace, 'tests/fixtures/strata-417.zip'), Buffer.from([4, 5, 6]));
+  assert.throws(() => verifyCaptureBuild(root), /stale/);
+});

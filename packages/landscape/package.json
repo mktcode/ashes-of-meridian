@@ -1,0 +1,17 @@
+{
+  "name": "@aom/landscape",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./crowd": { "types": "./dist/crowd.d.ts", "import": "./dist/crowd.js" }
+  },
+  "peerDependencies": { "@aom/crowd-simulation": "0.1.0" },
+  "peerDependenciesMeta": { "@aom/crowd-simulation": { "optional": true } },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "tsc -p tests/tsconfig.json && node --max-old-space-size=128 --test --test-concurrency=1 tests/map.test.mjs tests/adapter.test.mjs",
+    "test:browser": "node tests/check-browser.mjs"
+  }
+}

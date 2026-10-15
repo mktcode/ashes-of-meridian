@@ -19,6 +19,11 @@ Picking. Interne Module werden beim Build in ein klassisches synchrones Browser-
 separaten Moduleinstieg. Eine spätere Spielanbindung muss den Besitzer der Körperpositionen
 eindeutig festlegen, nicht zwei Bewegungssimulationen auf denselben Körper anwenden.
 
+Das unabhängige Landscape-Workspace importiert gespeicherte STRATA-Höhen und erzeugt
+ein CPU-Mesh. Sein optionaler Crowd-Adapter verwendet die Factory des Verbrauchers,
+keine zweite Crowd-Laufzeit. Die eigenständige Terrain/Crowd-Demo bündelt Import und
+UI für `file://`; sie ist weder Editorübernahme noch Anbindung an die Spielsimulation.
+
 Nach Änderungen an Auslieferungsdateien neu bauen: die Buildkennung beschreibt den
 gebauten Payload einschließlich Crowd-Demo, prüft aber nicht dessen Integrität zur Laufzeit.
 
